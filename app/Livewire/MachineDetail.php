@@ -1,0 +1,381 @@
+<?php
+
+namespace App\Livewire;
+
+use App\Models\Machine;
+use App\Models\Alert;
+use App\Models\Manual;
+use App\Models\SupervisorMessage;
+use Livewire\Component;
+use Livewire\WithFileUploads;
+use Illuminate\Support\Facades\Http;
+use Smalot\PdfParser\Parser;
+
+class MachineDetail extends Component
+{
+    use WithFileUploads;
+
+    public $machineId;
+    public $showWarnBanner = true;
+    
+    // Chatbot state
+    public $chatMessages = [];
+    public $userInput = '';
+    public $isThinking = false;
+    
+    // Supervisor chat state
+    public $supervisorInput = '';
+    public $supervisorMessages = [];
+    
+    // Operator incidence states
+    public $incidenceStatus = 'warning';
+    public $incidenceReason = '';
+    public $alertDismissed = false;
+
+    public function mount($id)
+    {
+        $this->machineId = $id;
+        
+        // Initialize default welcome message for chatbot
+        $machine = Machine::find($id);
+        $this->chatMessages[] = [
+            'id' => 'welcome',
+            'sender' => 'bot',
+            'text' => "Hola, soy el asistente virtual de la **{$machine->name}**. ¿En qué puedo ayudarte hoy con esta unidad?",
+            'timestamp' => now()->format('H:i')
+        ];
+    }
+
+    public function sendChatbotMessage()
+    {
+        $this->validate([
+            'userInput' => 'required|string|max:1000'
+        ]);
+
+        $query = trim($this->userInput);
+        $this->userInput = '';
+
+        // Add user message
+        $userMsgId = 'msg-' . now()->timestamp . '-' . uniqid();
+        $this->chatMessages[] = [
+            'id' => $userMsgId,
+            'sender' => 'user',
+            'text' => $query,
+            'timestamp' => now()->format('H:i')
+        ];
+
+        $this->isThinking = true;
+    }
+
+    // This runs after the render cycle to call the AI API asynchronously using Livewire's hooks
+    public function getBotResponse()
+    {
+        if (!$this->isThinking) return;
+
+        $query = end($this->chatMessages)['text'];
+        $machine = Machine::with('manuals')->find($this->machineId);
+        
+        // Gather manual texts as context (Smart RAG search)
+        $context = "";
+        if ($machine && $machine->manuals->isNotEmpty()) {
+            $q = mb_strtolower($query);
+            // Detect if conversational, simple math, or short query
+            $isConversational = preg_match('/^(hola|buenos dias|buenas tardes|saludos|cuenta|dime los numeros|como te llamas|quien eres|22\+22|\d+\s*[\+\-\*\/]\s*\d+)/i', $q) || strlen($q) < 8;
+            
+            if (!$isConversational) {
+                // Technical keyword extraction
+                $words = array_filter(explode(' ', preg_replace('/[^\p{L}\p{N}\s]/u', '', $q)), function($w) {
+                    return strlen($w) > 4;
+                });
+                
+                $snippets = [];
+                foreach ($machine->manuals as $manual) {
+                    $manualText = $manual->text;
+                    foreach ($words as $word) {
+                        $pos = mb_strpos(mb_strtolower($manualText), $word);
+                        if ($pos !== false) {
+                            $start = max(0, $pos - 200);
+                            $length = 500;
+                            $snippet = mb_substr($manualText, $start, $length);
+                            $snippets[] = "📖 [... " . trim($snippet) . " ...]";
+                            if (count($snippets) >= 3) break 2; // limit to top 3 matching snippets
+                        }
+                    }
+                }
+                
+                if (!empty($snippets)) {
+                    $context = "DOCUMENTACIÓN RELEVANTE ENCONTRADA EN LOS MANUALES:\n" . implode("\n\n", $snippets) . "\n";
+                }
+            }
+        }
+
+        // Set prompt system context (use custom if defined, otherwise default)
+        $systemPrompt = $machine->custom_prompt ?: "Eres el asistente técnico de IA experto para la máquina {$machine->name} (Serial: {$machine->serial}) de CIMA Cableados.\n";
+        
+        if (!empty($context)) {
+            $systemPrompt .= "\nUsa la siguiente documentación técnica seleccionada de la máquina para responder las preguntas del usuario:\n{$context}\n";
+            $systemPrompt .= "Si la pregunta es técnica, basa tu respuesta principalmente en esta documentación técnica. Si no encuentras la respuesta en ella, indícalo de forma amable pero intenta responder según tu conocimiento técnico general.\n";
+        } else {
+            $systemPrompt .= "\nActualmente no hay manuales o no se requiere documentación técnica para esta consulta. Puedes responder de forma amigable y útil sobre el funcionamiento teórico general de la máquina o entablar una conversación informal según sea el caso.\n";
+        }
+
+        $systemPrompt .= "REGLA CRÍTICA: Debes poder responder de forma totalmente normal, natural y amigable a saludos habituales (como 'hola', 'buenos días'), listados generales (por ejemplo: 'dime los números del 1 al 10', 'cuenta hasta 5') y preguntas conversacionales generales (como '¿qué tal estás?'). No digas que falta información técnica para responder saludos o preguntas cotidianas.\n";
+        $systemPrompt .= "Responde siempre en español usando formato Markdown claro con viñetas si es necesario.";
+
+        try {
+            $groqKey = config('services.groq.key');
+            $geminiKey = config('services.gemini.key');
+
+            if ($groqKey) {
+                // Map chat messages to OpenAI message format (including history)
+                $apiMessages = [];
+                $apiMessages[] = [
+                    'role' => 'system',
+                    'content' => $systemPrompt
+                ];
+
+                $historyCount = count($this->chatMessages);
+                $startIdx = max(0, $historyCount - 9); // Send last 9 messages of history
+
+                for ($i = $startIdx; $i < $historyCount; $i++) {
+                    $msg = $this->chatMessages[$i];
+                    if ($msg['id'] === 'welcome') continue;
+                    
+                    $apiMessages[] = [
+                        'role' => $msg['sender'] === 'bot' ? 'assistant' : 'user',
+                        'content' => $msg['text']
+                    ];
+                }
+
+                // Call Groq API (OpenAI-compatible)
+                $response = Http::withoutVerifying()->withHeaders([
+                    'Content-Type' => 'application/json',
+                    'Authorization' => 'Bearer ' . $groqKey,
+                ])->post("https://api.groq.com/openai/v1/chat/completions", [
+                    'model' => 'llama-3.1-8b-instant',
+                    'messages' => $apiMessages,
+                    'temperature' => 0.4,
+                    'max_tokens' => 1024
+                ]);
+
+                if ($response->successful()) {
+                    $resJson = $response->json();
+                    $botText = $resJson['choices'][0]['message']['content'] ?? 'No he podido procesar tu solicitud.';
+                } else {
+                    \Illuminate\Support\Facades\Log::error("Groq API Error: Status " . $response->status() . " - Body: " . $response->body());
+                    $botText = $this->localSimulatorFallback($query, $machine);
+                }
+            } elseif ($geminiKey) {
+                // Map history for Gemini
+                $geminiContents = [];
+                $historyCount = count($this->chatMessages);
+                $startIdx = max(0, $historyCount - 9);
+
+                for ($i = $startIdx; $i < $historyCount; $i++) {
+                    $msg = $this->chatMessages[$i];
+                    if ($msg['id'] === 'welcome') continue;
+                    
+                    $geminiContents[] = [
+                        'role' => $msg['sender'] === 'bot' ? 'model' : 'user',
+                        'parts' => [
+                            ['text' => ($i === $historyCount - 1) ? "System Instruction:\n{$systemPrompt}\n\nUser Question: {$msg['text']}" : $msg['text']]
+                        ]
+                    ];
+                }
+
+                // Call Gemini API
+                $response = Http::withoutVerifying()->withHeaders([
+                    'Content-Type' => 'application/json',
+                ])->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$geminiKey}", [
+                    'contents' => $geminiContents,
+                    'generationConfig' => [
+                        'maxOutputTokens' => 1024,
+                        'temperature' => 0.4
+                    ]
+                ]);
+
+                if ($response->successful()) {
+                    $resJson = $response->json();
+                    $botText = $resJson['candidates'][0]['content']['parts'][0]['text'] ?? 'No he podido procesar tu solicitud.';
+                } else {
+                    \Illuminate\Support\Facades\Log::error("Gemini API Error: Status " . $response->status() . " - Body: " . $response->body());
+                    $botText = $this->localSimulatorFallback($query, $machine);
+                }
+            } else {
+                $botText = "⚠️ Error: No se ha configurado ninguna clave de API en el archivo .env. Por favor, define GROQ_API_KEY o GEMINI_API_KEY para comunicarte con la IA.";
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Chatbot Exception: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            $botText = $this->localSimulatorFallback($query, $machine);
+        }
+
+        // Add bot message
+        $this->chatMessages[] = [
+            'id' => 'msg-' . now()->timestamp . '-' . uniqid(),
+            'sender' => 'bot',
+            'text' => $botText,
+            'timestamp' => now()->format('H:i')
+        ];
+
+        $this->isThinking = false;
+    }
+
+    private function localSimulatorFallback($query, $machine)
+    {
+        $q = mb_strtolower(trim($query));
+        
+        // Conversational / Greetings
+        if (preg_match('/^(hola|buenos dias|buenas tardes|saludos)/i', $q)) {
+            return "¡Hola! Soy el simulador local de asistencia para la máquina **{$machine->name}**. ¿Qué consulta deseas realizar?";
+        }
+        if (preg_match('/(como te llamas|quien eres)/i', $q)) {
+            return "Soy el asistente inteligente para la unidad **{$machine->name}**. Estoy listo para ayudarte.";
+        }
+        if (preg_match('/dime los numeros del (\d+) al (\d+)/i', $q, $matches)) {
+            $nums = range($matches[1], $matches[2]);
+            return "Aquí tienes los números del {$matches[1]} al {$matches[2]}:\n" . implode(", ", $nums);
+        }
+        if (preg_match('/(cuenta hasta|escribe del 1 al)/i', $q)) {
+            return "Claro, aquí tienes:\n1, 2, 3, 4, 5, 6, 7, 8, 9, 10.";
+        }
+
+        // Look in database manuals (local keyword search)
+        foreach ($machine->manuals as $manual) {
+            $words = explode(' ', $q);
+            foreach ($words as $word) {
+                if (strlen($word) > 4 && mb_strpos(mb_strtolower($manual->text), $word) !== false) {
+                    // Extract sentence around the keyword
+                    $pos = mb_strpos(mb_strtolower($manual->text), $word);
+                    $start = max(0, $pos - 100);
+                    $snippet = mb_substr($manual->text, $start, 300);
+                    return "📖 **[Simulador RAG - Coincidencia en {$manual->fileName}]**:\n\n... " . trim($snippet) . " ...";
+                }
+            }
+        }
+
+        return "🤖 **[Modo Simulación CIMA]**:\nActualmente no tengo conexión activa con la API de IA (Groq/Gemini). He buscado tu consulta en los manuales de la máquina **{$machine->name}** pero no he encontrado coincidencias directas. Por favor, intenta de nuevo o sube un manual en PDF.";
+    }
+
+    // Supervisor Chat functions
+    public function sendSupervisorMessage()
+    {
+        $this->validate([
+            'supervisorInput' => 'required|string|max:1000'
+        ]);
+
+        $machine = Machine::find($this->machineId);
+        
+        SupervisorMessage::create([
+            'id' => 'msg-' . now()->timestamp . '-' . uniqid(),
+            'machine_id' => $this->machineId,
+            'machine_name' => $machine->name,
+            'text' => trim($this->supervisorInput),
+            'from' => 'operator',
+            'senderName' => 'Operario CIMA',
+            'timestamp' => now()->format('H:i'),
+            'read' => false
+        ]);
+
+        $this->supervisorInput = '';
+    }
+
+    public function deleteSupervisorMessage($id)
+    {
+        if (!auth()->check()) {
+            return;
+        }
+        
+        $msg = SupervisorMessage::find($id);
+        if ($msg) {
+            $msg->delete();
+        }
+    }
+
+    // Operator Incidence Registration
+    public function registerIncidence()
+    {
+        $this->validate([
+            'incidenceStatus' => 'required|in:online,maintenance,waiting,warning',
+            'incidenceReason' => 'required_if:incidenceStatus,maintenance,waiting,warning|string|max:500'
+        ]);
+
+        $machine = Machine::find($this->machineId);
+        if (!$machine) return;
+
+        $newStatus = $this->incidenceStatus;
+        $reason = trim($this->incidenceReason);
+
+        $statusNames = [
+            'online' => 'Disponible',
+            'warning' => 'Avería',
+            'maintenance' => 'Mantenimiento',
+            'waiting' => 'En Espera',
+        ];
+
+        $subLabel = '';
+        if ($newStatus !== 'online') {
+            $subLabel = $newStatus === 'warning' ? "AVERÍA: {$reason}" : 
+                        ($newStatus === 'maintenance' ? "MANT: {$reason}" : "ESPERA: {$reason}");
+        }
+
+        $machine->update([
+            'status' => $newStatus,
+            'subLabel' => $subLabel
+        ]);
+
+        $alertMessage = "Incidencia: {$machine->name} marcada en " . $statusNames[$newStatus];
+        if (!empty($reason)) {
+            $alertMessage .= ". Motivo: {$reason}";
+        }
+
+        // Create alert notifications
+        Alert::create([
+            'id' => 'alert-' . now()->timestamp . '-' . uniqid(),
+            'machine_id' => $machine->id,
+            'machine_name' => $machine->name,
+            'message' => $alertMessage,
+            'type' => $newStatus === 'online' ? 'info' : $newStatus,
+            'timestamp' => now()->format('d/m H:i'),
+            'read' => false
+        ]);
+
+        // Auto-post a message in the supervisor log
+        if ($newStatus !== 'online') {
+            SupervisorMessage::create([
+                'id' => 'msg-' . now()->timestamp . '-' . uniqid(),
+                'machine_id' => $machine->id,
+                'machine_name' => $machine->name,
+                'text' => "⚠️ Reportó Incidencia ({$statusNames[$newStatus]}): {$reason}",
+                'from' => 'operator',
+                'senderName' => 'Operario CIMA',
+                'timestamp' => now()->format('H:i'),
+                'read' => false
+            ]);
+        }
+
+        $this->incidenceReason = '';
+        $this->incidenceStatus = 'warning';
+        session()->flash('incidence_success', "Incidencia registrada y estado actualizado con éxito.");
+
+        // Dispatch event globally so the GlobalToast component catches it immediately
+        $this->dispatch('alert-created')->to(GlobalToast::class);
+    }
+
+    public function dismissAlert()
+    {
+        $this->alertDismissed = true;
+    }
+
+    public function render()
+    {
+        $machine = Machine::with('manuals')->find($this->machineId);
+        $this->supervisorMessages = SupervisorMessage::where('machine_id', $this->machineId)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        return view('livewire.machine-detail', [
+            'machine' => $machine,
+            'supervisorMessages' => $this->supervisorMessages
+        ])->title("Ficha Técnica: {$machine->name}");
+    }
+}
