@@ -34,6 +34,7 @@ class AdminDashboard extends Component
     public $userInput = '';
     public $isThinking = false;
     public $customPrompt = '';
+    public $imageAttachment;
 
     public function mount()
     {
@@ -102,17 +103,28 @@ class AdminDashboard extends Component
     public function sendChatbotMessage()
     {
         $this->validate([
-            'userInput' => 'required|string|max:1000'
+            'userInput' => 'required_without:imageAttachment|nullable|string|max:1000',
+            'imageAttachment' => 'nullable|image|max:10240' // max 10MB
         ]);
 
         $query = trim($this->userInput);
         $this->userInput = '';
+
+        $imageUrl = null;
+        $imagePath = null;
+        if ($this->imageAttachment) {
+            $imagePath = $this->imageAttachment->store('chatbot_attachments', 'public');
+            $imageUrl = asset('storage/' . $imagePath);
+            $this->imageAttachment = null;
+        }
 
         // Add user message
         $this->chatMessages[] = [
             'id' => 'msg-' . now()->timestamp . '-' . uniqid(),
             'sender' => 'user',
             'text' => $query,
+            'image_url' => $imageUrl,
+            'image_path' => $imagePath,
             'timestamp' => now()->format('H:i')
         ];
 
@@ -123,12 +135,13 @@ class AdminDashboard extends Component
     {
         if (!$this->isThinking) return;
 
-        $query = end($this->chatMessages)['text'];
+        $lastMsg = end($this->chatMessages);
+        $query = $lastMsg['text'] ?? '';
         $machine = Machine::with('manuals')->find($this->selectedMachineForChat);
         
         // Gather manual texts as context (Smart RAG search)
         $context = "";
-        if ($machine && $machine->manuals->isNotEmpty()) {
+        if (!empty($query) && $machine && $machine->manuals->isNotEmpty()) {
             $q = mb_strtolower($query);
             // Detect if conversational, simple math, or short query
             $isConversational = preg_match('/^(hola|buenos dias|buenas tardes|saludos|cuenta|dime los numeros|como te llamas|quien eres|22\+22|\d+\s*[\+\-\*\/]\s*\d+)/i', $q) || strlen($q) < 8;
@@ -185,6 +198,7 @@ class AdminDashboard extends Component
                     'content' => $systemPrompt
                 ];
 
+                $hasImageInConversation = false;
                 $historyCount = count($this->chatMessages);
                 $startIdx = max(0, $historyCount - 9); // Send last 9 messages of history
 
@@ -192,18 +206,54 @@ class AdminDashboard extends Component
                     $msg = $this->chatMessages[$i];
                     if ($msg['id'] === 'welcome') continue;
                     
-                    $apiMessages[] = [
-                        'role' => $msg['sender'] === 'bot' ? 'assistant' : 'user',
-                        'content' => $msg['text']
-                    ];
+                    $msgText = $msg['text'] ?? '';
+                    $imagePath = $msg['image_path'] ?? null;
+                    $fullPath = $imagePath ? storage_path('app/public/' . $imagePath) : null;
+
+                    if ($imagePath && file_exists($fullPath)) {
+                        $hasImageInConversation = true;
+                        $mimeType = mime_content_type($fullPath);
+                        $base64 = base64_encode(file_get_contents($fullPath));
+
+                        $content = [];
+                        if (!empty($msgText)) {
+                            $content[] = [
+                                'type' => 'text',
+                                'text' => $msgText
+                            ];
+                        } else {
+                            $content[] = [
+                                'type' => 'text',
+                                'text' => 'Analiza esta imagen.'
+                            ];
+                        }
+                        $content[] = [
+                            'type' => 'image_url',
+                            'image_url' => [
+                                'url' => "data:{$mimeType};base64,{$base64}"
+                            ]
+                        ];
+
+                        $apiMessages[] = [
+                            'role' => $msg['sender'] === 'bot' ? 'assistant' : 'user',
+                            'content' => $content
+                        ];
+                    } else {
+                        $apiMessages[] = [
+                            'role' => $msg['sender'] === 'bot' ? 'assistant' : 'user',
+                            'content' => $msgText
+                        ];
+                    }
                 }
+
+                $model = $hasImageInConversation ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.1-8b-instant';
 
                 // Call Groq API (OpenAI-compatible)
                 $response = Http::withoutVerifying()->withHeaders([
                     'Content-Type' => 'application/json',
                     'Authorization' => 'Bearer ' . $groqKey,
                 ])->post("https://api.groq.com/openai/v1/chat/completions", [
-                    'model' => 'llama-3.1-8b-instant',
+                    'model' => $model,
                     'messages' => $apiMessages,
                     'temperature' => 0.4,
                     'max_tokens' => 1024
@@ -225,11 +275,43 @@ class AdminDashboard extends Component
                     $msg = $this->chatMessages[$i];
                     if ($msg['id'] === 'welcome') continue;
                     
+                    $msgText = $msg['text'] ?? '';
+                    $imagePath = $msg['image_path'] ?? null;
+                    $fullPath = $imagePath ? storage_path('app/public/' . $imagePath) : null;
+
+                    $parts = [];
+                    if ($imagePath && file_exists($fullPath)) {
+                        $mimeType = mime_content_type($fullPath);
+                        $base64 = base64_encode(file_get_contents($fullPath));
+                        
+                        $textVal = $msgText;
+                        if ($i === $historyCount - 1 && $msg['sender'] === 'user') {
+                            $textVal = "System Instruction:\n{$systemPrompt}\n\nUser Question: " . ($textVal ?: 'Analiza esta imagen.');
+                        }
+                        
+                        if (!empty($textVal)) {
+                            $parts[] = ['text' => $textVal];
+                        } else {
+                            $parts[] = ['text' => 'Analiza esta imagen.'];
+                        }
+                        
+                        $parts[] = [
+                            'inlineData' => [
+                                'mimeType' => $mimeType,
+                                'data' => $base64
+                            ]
+                        ];
+                    } else {
+                        $textVal = $msgText;
+                        if ($i === $historyCount - 1 && $msg['sender'] === 'user') {
+                            $textVal = "System Instruction:\n{$systemPrompt}\n\nUser Question: {$textVal}";
+                        }
+                        $parts[] = ['text' => $textVal];
+                    }
+
                     $geminiContents[] = [
                         'role' => $msg['sender'] === 'bot' ? 'model' : 'user',
-                        'parts' => [
-                            ['text' => ($i === $historyCount - 1) ? "System Instruction:\n{$systemPrompt}\n\nUser Question: {$msg['text']}" : $msg['text']]
-                        ]
+                        'parts' => $parts
                     ];
                 }
 

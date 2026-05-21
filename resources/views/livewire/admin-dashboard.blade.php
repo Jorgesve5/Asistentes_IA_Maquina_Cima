@@ -293,9 +293,16 @@
                                         🤖 ASISTENTE MOCK ADMIN
                                     </div>
                                 @endif
-                                <div class="leading-relaxed whitespace-pre-line prose prose-invert prose-xs">
-                                    {!! nl2br(e($msg['text'])) !!}
-                                </div>
+                                @if(!empty($msg['image_url']))
+                                    <div class="mb-2">
+                                        <img src="{{ $msg['image_url'] }}" class="max-h-48 rounded-lg border border-white/10 object-contain cursor-pointer" onclick="window.open('{{ $msg['image_url'] }}', '_blank')" />
+                                    </div>
+                                @endif
+                                @if(!empty($msg['text']))
+                                    <div class="leading-relaxed whitespace-pre-line prose prose-invert prose-xs">
+                                        {!! nl2br(e($msg['text'])) !!}
+                                    </div>
+                                @endif
                                 <span class="block text-[8px] font-mono text-slate-500 text-right mt-1.5">{{ $msg['timestamp'] }}</span>
                             </div>
                         </div>
@@ -318,21 +325,59 @@
                 </div>
 
                 <!-- Inputs -->
-                <form wire:submit.prevent="sendChatbotMessage" class="p-4 border-t border-white/5 bg-[#0a0e17]/95 flex items-center gap-3">
-                    <input
-                        type="text"
-                        wire:model="userInput"
-                        placeholder="Prueba una pregunta técnica..."
-                        class="flex-1 bg-white/3 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 transition-colors"
-                    />
-                    <button
-                        type="submit"
-                        class="p-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-xl active:scale-95 transition-all flex items-center justify-center"
-                    >
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
-                    </button>
+                <form wire:submit.prevent="sendChatbotMessage" class="p-4 border-t border-white/5 bg-[#0a0e17]/95 flex flex-col gap-2">
+                    <!-- Image attachment preview -->
+                    @if($imageAttachment)
+                        <div class="flex items-center gap-2 p-2 bg-white/5 border border-white/10 rounded-xl relative max-w-max">
+                            <img src="{{ $imageAttachment->temporaryUrl() }}" class="h-14 w-14 object-cover rounded-lg border border-white/10" />
+                            <button
+                                type="button"
+                                wire:click="$set('imageAttachment', null)"
+                                class="absolute -top-1.5 -right-1.5 bg-red-500 hover:bg-red-400 text-white rounded-full p-1 shadow-md active:scale-90 transition-all flex items-center justify-center"
+                            >
+                                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    @endif
+
+                    <div class="flex items-center gap-3">
+                        <!-- Image Upload Button -->
+                        <label class="cursor-pointer p-2.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl border border-white/10 transition-colors flex items-center justify-center relative">
+                            <input
+                                type="file"
+                                wire:model="imageAttachment"
+                                accept="image/*"
+                                class="hidden"
+                            />
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <!-- Loading spinner for image upload -->
+                            <div wire:loading wire:target="imageAttachment" class="absolute inset-0 bg-[#0a0e17]/85 rounded-xl flex items-center justify-center">
+                                <svg class="animate-spin h-4 w-4 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+                        </label>
+
+                        <input
+                            type="text"
+                            wire:model="userInput"
+                            placeholder="Prueba una pregunta técnica o sube una imagen..."
+                            class="flex-1 bg-white/3 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 transition-colors"
+                        />
+                        <button
+                            type="submit"
+                            class="p-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-xl active:scale-95 transition-all flex items-center justify-center"
+                        >
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
