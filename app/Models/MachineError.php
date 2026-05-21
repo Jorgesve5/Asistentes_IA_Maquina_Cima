@@ -4,14 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Manual extends Model
+class MachineError extends Model
 {
     protected $fillable = [
-        'machine_id', 'fileName', 'size', 'text', 'file_path', 'category', 'file_type', 'in_chat'
-    ];
-
-    protected $casts = [
-        'in_chat' => 'boolean',
+        'machine_id', 'user_message', 'image_path', 'ai_response'
     ];
 
     public function machine()

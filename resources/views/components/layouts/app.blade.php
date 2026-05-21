@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title ?? 'CIMA Cableados' }}</title>
+    <title>{{ $title ?? 'Arancalo' }}</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -43,13 +43,12 @@
         }
     </script>
 </head>
-<body class="bg-[#070b14] text-slate-100 font-sans min-h-screen relative overflow-x-hidden antialiased">
+<body class="bg-slate-50 text-slate-900 font-sans min-h-screen relative overflow-x-hidden antialiased transition-colors duration-300">
 
     <!-- Grid Background -->
     <div class="fixed inset-0 pointer-events-none select-none z-0">
-        <div class="absolute inset-0 bg-[linear-gradient(to_right,#ffffff02_1px,transparent_1px),linear-gradient(to_bottom,#ffffff02_1px,transparent_1px)] bg-[size:40px_40px]"></div>
-        <div class="absolute top-[-80px] left-[15%] h-[500px] w-[700px] rounded-full bg-cyan-600/5 blur-[180px]"></div>
-        <div class="absolute bottom-0 right-[5%] h-[400px] w-[500px] rounded-full bg-indigo-700/5 blur-[150px]"></div>
+        <div class="absolute inset-0 bg-[linear-gradient(to_right,#00000003_1px,transparent_1px),linear-gradient(to_bottom,#00000003_1px,transparent_1px)] bg-[size:40px_40px]"></div>
+        <div class="absolute top-[-80px] left-[15%] h-[500px] w-[700px] rounded-full bg-cyan-500/5 blur-[180px]"></div>
     </div>
 
     <!-- Main Content wrapper -->

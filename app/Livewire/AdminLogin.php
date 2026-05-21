@@ -27,6 +27,6 @@ class AdminLogin extends Component
 
     public function render()
     {
-        return view('livewire.admin-login')->title('Acceso Supervisor - CIMA');
+        return view('livewire.admin-login')->title('Acceso Supervisor - Arancalo');
     }
 }

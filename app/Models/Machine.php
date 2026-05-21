@@ -18,4 +18,9 @@ class Machine extends Model
     {
         return $this->hasMany(Manual::class);
     }
+
+    public function errors()
+    {
+        return $this->hasMany(MachineError::class);
+    }
 }

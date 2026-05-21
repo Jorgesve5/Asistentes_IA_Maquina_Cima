@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
         User::updateOrCreate(
             ['email' => 'admin'],
             [
-                'name' => 'Supervisor CIMA',
+                'name' => 'Supervisor Arancalo',
                 'password' => bcrypt('1234'),
             ]
         );
@@ -114,7 +114,7 @@ class DatabaseSeeder extends Seeder
                 'row' => 1,
                 'subLabel' => 'LISTADO DE OF MAQUINAS',
                 'manuals' => [
-                    ['fileName' => 'Alpha_565_Setup_Instructions.pdf', 'size' => '8.3 MB', 'text' => 'Configuración de doble crimpado en la Alpha 565. Ajustar altura de crimpado a 1.25 mm para terminales CIMA.']
+                    ['fileName' => 'Alpha_565_Setup_Instructions.pdf', 'size' => '8.3 MB', 'text' => 'Configuración de doble crimpado en la Alpha 565. Ajustar altura de crimpado a 1.25 mm para terminales Arancalo.']
                 ]
             ],
             [

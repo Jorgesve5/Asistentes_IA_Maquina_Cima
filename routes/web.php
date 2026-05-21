@@ -5,11 +5,13 @@ use App\Livewire\Dashboard;
 use App\Livewire\MachineDetail;
 use App\Livewire\AdminDashboard;
 use App\Livewire\AdminLogin;
+use App\Livewire\ManualsExplorer;
 
 use App\Http\Controllers\ApiController;
 
 Route::get('/', Dashboard::class);
 Route::get('/machines/{id}', MachineDetail::class);
+Route::get('/manuals', ManualsExplorer::class);
 Route::get('/admin/login', AdminLogin::class)->name('login');
 Route::get('/admin', AdminDashboard::class);
 

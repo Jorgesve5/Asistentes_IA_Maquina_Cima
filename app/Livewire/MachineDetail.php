@@ -9,6 +9,8 @@ use App\Models\SupervisorMessage;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
+use Carbon\Carbon;
 use Smalot\PdfParser\Parser;
 
 class MachineDetail extends Component
@@ -16,7 +18,18 @@ class MachineDetail extends Component
     use WithFileUploads;
 
     public $machineId;
+    public $contextKey;
     public $showWarnBanner = true;
+
+    // Document search and explorer state
+    public $docSearch = '';
+    public $docCategory = '';
+    public $showDocExplorerModal = false;
+    public $showErrorsModal = false;
+
+    // Viewer modal state
+    public $viewingManualId = null;
+    public $showViewerModal = false;
     
     // Chatbot state
     public $chatMessages = [];
@@ -36,15 +49,30 @@ class MachineDetail extends Component
     public function mount($id)
     {
         $this->machineId = $id;
+
+        // Build a user-namespaced context key so each user has their own chat history
+        $userId = auth()->id() ?? 'guest_' . session()->getId();
+        $this->contextKey = "machine_chat_context_{$userId}_{$id}";
         
-        // Initialize default welcome message for chatbot
+        // Always start with clean on-screen messages
         $machine = Machine::find($id);
-        $this->chatMessages[] = [
+        $welcomeMessage = [
             'id' => 'welcome',
             'sender' => 'bot',
             'text' => "Hola, soy el asistente virtual de la **{$machine->name}**. ¿En qué puedo ayudarte hoy con esta unidad?",
             'timestamp' => now()->format('H:i')
         ];
+        $this->chatMessages[] = $welcomeMessage;
+
+        // Check if admin triggered a global IA reset for this machine
+        $this->checkGlobalIAReset($machine);
+
+        // Initialize background chat context in session if it doesn't exist
+        if (!session()->has($this->contextKey)) {
+            session([$this->contextKey => $this->chatMessages]);
+        }
+
+        $this->loadSupervisorMessages();
     }
 
     public function sendChatbotMessage()
@@ -67,7 +95,7 @@ class MachineDetail extends Component
 
         // Add user message
         $userMsgId = 'msg-' . now()->timestamp . '-' . uniqid();
-        $this->chatMessages[] = [
+        $userMsg = [
             'id' => $userMsgId,
             'sender' => 'user',
             'text' => $query,
@@ -75,6 +103,9 @@ class MachineDetail extends Component
             'image_path' => $imagePath,
             'timestamp' => now()->format('H:i')
         ];
+        $this->chatMessages[] = $userMsg;
+
+        $this->appendToSessionContext($userMsg);
 
         $this->isThinking = true;
     }
@@ -86,6 +117,7 @@ class MachineDetail extends Component
 
         $lastMsg = end($this->chatMessages);
         $query = $lastMsg['text'] ?? '';
+        $imagePath = $lastMsg['image_path'] ?? null;
         $machine = Machine::with('manuals')->find($this->machineId);
         
         // Gather manual texts as context (Smart RAG search)
@@ -102,7 +134,8 @@ class MachineDetail extends Component
                 });
                 
                 $snippets = [];
-                foreach ($machine->manuals as $manual) {
+                $chatManuals = $machine->manuals->where('in_chat', true);
+                foreach ($chatManuals as $manual) {
                     $manualText = $manual->text;
                     foreach ($words as $word) {
                         $pos = mb_strpos(mb_strtolower($manualText), $word);
@@ -123,7 +156,7 @@ class MachineDetail extends Component
         }
 
         // Set prompt system context (use custom if defined, otherwise default)
-        $systemPrompt = $machine->custom_prompt ?: "Eres el asistente técnico de IA experto para la máquina {$machine->name} (Serial: {$machine->serial}) de CIMA Cableados.\n";
+        $systemPrompt = $machine->custom_prompt ?: "Eres el asistente técnico de IA experto para la máquina {$machine->name} (Serial: {$machine->serial}) de Arancalo.\n";
         
         if (!empty($context)) {
             $systemPrompt .= "\nUsa la siguiente documentación técnica seleccionada de la máquina para responder las preguntas del usuario:\n{$context}\n";
@@ -148,11 +181,12 @@ class MachineDetail extends Component
                 ];
 
                 $hasImageInConversation = false;
-                $historyCount = count($this->chatMessages);
+                $contextMessages = session($this->contextKey, []);
+                $historyCount = count($contextMessages);
                 $startIdx = max(0, $historyCount - 9); // Send last 9 messages of history
 
                 for ($i = $startIdx; $i < $historyCount; $i++) {
-                    $msg = $this->chatMessages[$i];
+                    $msg = $contextMessages[$i];
                     if ($msg['id'] === 'welcome') continue;
                     
                     $msgText = $msg['text'] ?? '';
@@ -218,11 +252,12 @@ class MachineDetail extends Component
             } elseif ($geminiKey) {
                 // Map history for Gemini
                 $geminiContents = [];
-                $historyCount = count($this->chatMessages);
+                $contextMessages = session($this->contextKey, []);
+                $historyCount = count($contextMessages);
                 $startIdx = max(0, $historyCount - 9);
 
                 for ($i = $startIdx; $i < $historyCount; $i++) {
-                    $msg = $this->chatMessages[$i];
+                    $msg = $contextMessages[$i];
                     if ($msg['id'] === 'welcome') continue;
                     
                     $msgText = $msg['text'] ?? '';
@@ -292,12 +327,40 @@ class MachineDetail extends Component
         }
 
         // Add bot message
-        $this->chatMessages[] = [
+        $botMsg = [
             'id' => 'msg-' . now()->timestamp . '-' . uniqid(),
             'sender' => 'bot',
             'text' => $botText,
             'timestamp' => now()->format('H:i')
         ];
+        $this->chatMessages[] = $botMsg;
+
+        $this->appendToSessionContext($botMsg);
+
+        // Save error if it has an image or matches error keywords
+        $containsErrorKeyword = false;
+        if (!empty($query)) {
+            $keywords = ['error', 'fallo', 'avería', 'averia', 'problema', 'defecto', 'roto', 'no funciona', 'alarma', 'defectuoso', 'daño', 'dañado', 'anomaly', 'anomalía', 'anomalia', 'incidencia'];
+            foreach ($keywords as $kw) {
+                if (mb_strpos(mb_strtolower($query), $kw) !== false) {
+                    $containsErrorKeyword = true;
+                    break;
+                }
+            }
+        }
+
+        if ($imagePath !== null || $containsErrorKeyword) {
+            try {
+                \App\Models\MachineError::create([
+                    'machine_id' => $this->machineId,
+                    'user_message' => $query ?: ($imagePath ? 'Imagen de fallo enviada' : 'Fallo reportado'),
+                    'image_path' => $imagePath,
+                    'ai_response' => $botText,
+                ]);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Error saving MachineError: " . $e->getMessage());
+            }
+        }
 
         $this->isThinking = false;
     }
@@ -322,7 +385,7 @@ class MachineDetail extends Component
         }
 
         // Look in database manuals (local keyword search)
-        foreach ($machine->manuals as $manual) {
+        foreach ($machine->manuals->where('in_chat', true) as $manual) {
             $words = explode(' ', $q);
             foreach ($words as $word) {
                 if (strlen($word) > 4 && mb_strpos(mb_strtolower($manual->text), $word) !== false) {
@@ -335,7 +398,7 @@ class MachineDetail extends Component
             }
         }
 
-        return "🤖 **[Modo Simulación CIMA]**:\nActualmente no tengo conexión activa con la API de IA (Groq/Gemini). He buscado tu consulta en los manuales de la máquina **{$machine->name}** pero no he encontrado coincidencias directas. Por favor, intenta de nuevo o sube un manual en PDF.";
+        return "🤖 **[Modo Simulación Arancalo]**:\nActualmente no tengo conexión activa con la API de IA (Groq/Gemini). He buscado tu consulta en los manuales de la máquina **{$machine->name}** pero no he encontrado coincidencias directas. Por favor, intenta de nuevo o sube un manual en PDF.";
     }
 
     // Supervisor Chat functions
@@ -353,7 +416,7 @@ class MachineDetail extends Component
             'machine_name' => $machine->name,
             'text' => trim($this->supervisorInput),
             'from' => 'operator',
-            'senderName' => 'Operario CIMA',
+            'senderName' => 'Operario Arancalo',
             'timestamp' => now()->format('H:i'),
             'read' => false
         ]);
@@ -429,7 +492,7 @@ class MachineDetail extends Component
                 'machine_name' => $machine->name,
                 'text' => "⚠️ Reportó Incidencia ({$statusNames[$newStatus]}): {$reason}",
                 'from' => 'operator',
-                'senderName' => 'Operario CIMA',
+                'senderName' => 'Operario Arancalo',
                 'timestamp' => now()->format('H:i'),
                 'read' => false
             ]);
@@ -448,16 +511,161 @@ class MachineDetail extends Component
         $this->alertDismissed = true;
     }
 
-    public function render()
+    public function openDocExplorer()
     {
-        $machine = Machine::with('manuals')->find($this->machineId);
+        $this->showDocExplorerModal = true;
+    }
+
+    public function closeDocExplorer()
+    {
+        $this->showDocExplorerModal = false;
+        $this->docSearch = '';
+        $this->docCategory = '';
+    }
+
+    public function openViewer($id)
+    {
+        $this->viewingManualId = $id;
+        $this->showViewerModal = true;
+    }
+
+    public function closeViewer()
+    {
+        $this->showViewerModal = false;
+        $this->viewingManualId = null;
+    }
+
+    public function openErrorsModal()
+    {
+        $this->showErrorsModal = true;
+    }
+
+    public function closeErrorsModal()
+    {
+        $this->showErrorsModal = false;
+    }
+
+    public function deleteMachineError($id)
+    {
+        $err = \App\Models\MachineError::find($id);
+        if ($err) {
+            $err->delete();
+        }
+    }
+
+    public function clearChatHistory()
+    {
+        $machine = Machine::find($this->machineId);
+        $this->chatMessages = [];
+        $welcomeMsg = [
+            'id' => 'welcome',
+            'sender' => 'bot',
+            'text' => "Hola, soy el asistente virtual de la **{$machine->name}**. ¿En qué puedo ayudarte hoy con esta unidad?",
+            'timestamp' => now()->format('H:i')
+        ];
+        $this->chatMessages[] = $welcomeMsg;
+        // Clear both screen and background context (user-namespaced)
+        session()->forget($this->contextKey);
+        session([$this->contextKey => $this->chatMessages]);
+    }
+
+    private function appendToSessionContext(array $message)
+    {
+        $context = session($this->contextKey, []);
+        $context[] = $message;
+
+        // Keep the welcome message at index 0, and the last 30 messages to avoid session bloat
+        if (count($context) > 31) {
+            $welcome = $context[0];
+            $lastMessages = array_slice($context, -30);
+            $context = array_merge([$welcome], $lastMessages);
+        }
+
+        session([$this->contextKey => $context]);
+    }
+
+    /**
+     * Check if the admin triggered a global IA reset for this machine.
+     * Compares the global reset timestamp (in Cache) with the user's session timestamp.
+     * If a newer reset exists, wipe the user's chat history.
+     */
+    private function checkGlobalIAReset($machine)
+    {
+        $globalResetAt = Cache::get("machine_ia_reset_at_{$this->machineId}");
+        $sessionResetAt = session("machine_chat_reset_at_{$this->machineId}");
+
+        if ($globalResetAt && (!$sessionResetAt || Carbon::parse($sessionResetAt)->lt(Carbon::parse($globalResetAt)))) {
+            // Admin reset happened after this user's last acknowledgement — wipe context
+            session()->forget($this->contextKey);
+            $this->chatMessages = [];
+            $this->chatMessages[] = [
+                'id' => 'welcome',
+                'sender' => 'bot',
+                'text' => "Hola, soy el asistente virtual de la **{$machine->name}**. ¿En qué puedo ayudarte hoy con esta unidad?",
+                'timestamp' => now()->format('H:i')
+            ];
+            session([$this->contextKey => $this->chatMessages]);
+            // Mark the reset as acknowledged for this user's session
+            session(["machine_chat_reset_at_{$this->machineId}" => now()->toDateTimeString()]);
+        }
+    }
+
+    private function loadSupervisorMessages()
+    {
         $this->supervisorMessages = SupervisorMessage::where('machine_id', $this->machineId)
             ->orderBy('created_at', 'asc')
             ->get();
+    }
+
+    public function render()
+    {
+        $machine = Machine::with('manuals')->find($this->machineId);
+
+        // Only query manuals when the doc explorer modal is open
+        $machineManuals = collect();
+        if ($this->showDocExplorerModal) {
+            $manualsQuery = Manual::where('machine_id', $this->machineId);
+
+            if (!empty($this->docSearch)) {
+                $searchTerm = '%' . $this->docSearch . '%';
+                $manualsQuery->where(function($q) use ($searchTerm) {
+                    $q->where('fileName', 'like', $searchTerm)
+                      ->orWhere('text', 'like', $searchTerm);
+                });
+            }
+
+            if (!empty($this->docCategory)) {
+                $manualsQuery->where('category', $this->docCategory);
+            }
+
+            $machineManuals = $manualsQuery->latest()->get();
+        }
+
+        $categories = [
+            'Manual de Operación',
+            'Esquema Eléctrico',
+            'Guía Rápida',
+            'Hoja de Registro',
+            'Imágenes',
+            'Otro'
+        ];
+
+        $viewingManual = $this->viewingManualId ? Manual::find($this->viewingManualId) : null;
+
+        $this->loadSupervisorMessages();
+
+        // Only query errors when the errors modal is open
+        $machineErrors = $this->showErrorsModal
+            ? \App\Models\MachineError::where('machine_id', $this->machineId)->latest()->get()
+            : collect();
 
         return view('livewire.machine-detail', [
             'machine' => $machine,
-            'supervisorMessages' => $this->supervisorMessages
+            'machineManuals' => $machineManuals,
+            'categories' => $categories,
+            'viewingManual' => $viewingManual,
+            'supervisorMessages' => $this->supervisorMessages,
+            'machineErrors' => $machineErrors
         ])->title("Ficha Técnica: {$machine->name}");
     }
 }

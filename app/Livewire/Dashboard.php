@@ -48,6 +48,7 @@ class Dashboard extends Component
             'countMaintenance' => $countMaintenance,
             'countWaiting' => $countWaiting,
             'countWarning' => $countWarning,
-        ])->title('ZONA MÁQUINAS - CIMA');
+        ])->layout('layouts.app', ['bodyClass' => 'bg-slate-50 text-slate-900'])
+          ->title('ZONA MÁQUINAS - Arancalo');
     }
 }
