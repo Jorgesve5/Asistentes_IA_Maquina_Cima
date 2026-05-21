@@ -148,32 +148,16 @@
                     </svg>
                     Ajustes para Nuevas Subidas
                 </h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                    <div>
-                        <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Categoría Asignada</label>
-                        <select
-                            wire:model="uploadCategory"
-                            class="w-full bg-slate-50 border border-slate-205 border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-cyan-500/50 transition-colors"
-                        >
-                            <option value="Manual de Operación">Manual de Operación</option>
-                            <option value="Esquema Eléctrico">Esquema Eléctrico</option>
-                            <option value="Guía Rápida">Guía Rápida</option>
-                            <option value="Hoja de Registro">Hoja de Registro</option>
-                            <option value="Imágenes">Imágenes</option>
-                            <option value="Otro">Otro</option>
-                        </select>
-                    </div>
-                    <div class="flex items-center gap-3 mt-4 sm:mt-0 sm:pt-4">
-                        <label class="relative flex items-center cursor-pointer select-none">
-                            <input 
-                                type="checkbox" 
-                                wire:model="uploadInChat" 
-                                class="sr-only peer"
-                            />
-                            <div class="w-9 h-5 bg-slate-250 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-600"></div>
-                            <span class="ml-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono">Habilitar en Chat (RAG) por defecto</span>
-                        </label>
-                    </div>
+                <div class="flex items-center gap-3 text-xs">
+                    <label class="relative flex items-center cursor-pointer select-none">
+                        <input 
+                            type="checkbox" 
+                            wire:model="uploadInChat" 
+                            class="sr-only peer"
+                        />
+                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-600"></div>
+                        <span class="ml-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono">Habilitar en Chat (RAG) por defecto</span>
+                    </label>
                 </div>
             </div>
 
@@ -240,7 +224,7 @@
                                         <tr class="text-left text-slate-500 border-b border-slate-100 pb-2 text-[9px] uppercase tracking-wider">
                                             <th class="pb-2 font-bold">Tipo</th>
                                             <th class="pb-2 font-bold">Nombre de archivo</th>
-                                            <th class="pb-2 font-bold">Categoría</th>
+
                                             <th class="pb-2 font-bold text-center">Chat IA (RAG)</th>
                                             <th class="pb-2 font-bold text-right">Tamaño</th>
                                             <th class="pb-2 font-bold text-right">Acción</th>
@@ -268,19 +252,7 @@
                                                 <td class="py-2.5 font-bold max-w-[200px] truncate pr-2 text-slate-800" title="{{ $man->fileName }}">
                                                     {{ $man->fileName }}
                                                 </td>
-                                                <td class="py-2.5 pr-2">
-                                                    <select
-                                                        wire:change="updateManualCategory('{{ $man->id }}', $event.target.value)"
-                                                        class="bg-white border border-slate-200 rounded px-2 py-1 text-[10px] text-slate-700 focus:outline-none focus:border-cyan-500/50"
-                                                    >
-                                                        <option value="Manual de Operación" {{ $man->category === 'Manual de Operación' ? 'selected' : '' }}>Manual de Operación</option>
-                                                        <option value="Esquema Eléctrico" {{ $man->category === 'Esquema Eléctrico' ? 'selected' : '' }}>Esquema Eléctrico</option>
-                                                        <option value="Guía Rápida" {{ $man->category === 'Guía Rápida' ? 'selected' : '' }}>Guía Rápida</option>
-                                                        <option value="Hoja de Registro" {{ $man->category === 'Hoja de Registro' ? 'selected' : '' }}>Hoja de Registro</option>
-                                                        <option value="Imágenes" {{ $man->category === 'Imágenes' ? 'selected' : '' }}>Imágenes</option>
-                                                        <option value="Otro" {{ $man->category === 'Otro' ? 'selected' : '' }}>Otro</option>
-                                                    </select>
-                                                </td>
+
                                                 <td class="py-2.5 text-center">
                                                     <button
                                                         wire:click="toggleInChat('{{ $man->id }}')"

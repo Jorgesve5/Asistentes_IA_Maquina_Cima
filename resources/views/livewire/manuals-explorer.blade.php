@@ -46,19 +46,6 @@
                 </select>
             </div>
 
-            <!-- Category Filter -->
-            <div>
-                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 pl-1">Categoría</label>
-                <select 
-                    wire:model.live="category" 
-                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all font-medium"
-                >
-                    <option value="">Todas las categorías</option>
-                    @foreach($categories as $cat)
-                        <option value="{{ $cat }}">{{ $cat }}</option>
-                    @endforeach
-                </select>
-            </div>
 
             <!-- File Type Filter -->
             <div>
@@ -76,7 +63,7 @@
                         <option value="other">Otros formatos</option>
                     </select>
 
-                    @if($search || $category || $machineId || $fileType)
+                    @if($search || $machineId || $fileType)
                         <button 
                             wire:click="clearFilters" 
                             class="px-3 bg-red-50 text-red-600 border border-red-100 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors flex items-center justify-center"
@@ -104,9 +91,9 @@
                 </div>
                 <h3 class="text-base font-extrabold text-slate-700 uppercase tracking-wider">No se encontraron archivos</h3>
                 <p class="text-xs text-slate-400 mt-2 max-w-md mx-auto">
-                    Intenta cambiar la palabra de búsqueda o ajustar los filtros de categoría y máquina.
+                    Intenta cambiar la palabra de búsqueda o ajustar los filtros de máquina y tipo de archivo.
                 </p>
-                @if($search || $category || $machineId || $fileType)
+                @if($search || $machineId || $fileType)
                     <button wire:click="clearFilters" class="mt-5 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors">
                         Restablecer Filtros
                     </button>
@@ -153,16 +140,9 @@
                     <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md hover:scale-[1.01] transition-all duration-200 flex flex-col justify-between">
                         <div>
                             <!-- Header Info -->
-                            <div class="flex items-center justify-between gap-2 mb-3">
-                                <div class="px-2 py-0.5 rounded-full border text-[9px] font-bold bg-slate-50 border-slate-100 text-slate-500 uppercase">
-                                    {{ $manual->category }}
+                                <div class="px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase {{ $manual->in_chat ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-400' }}">
+                                    {{ $manual->in_chat ? 'RAG' : 'Offline' }}
                                 </div>
-                                <div class="flex items-center gap-1">
-                                    <span class="text-[9px] font-bold uppercase {{ $manual->in_chat ? 'text-emerald-600' : 'text-slate-400' }}">
-                                        {{ $manual->in_chat ? 'RAG' : 'Offline' }}
-                                    </span>
-                                </div>
-                            </div>
 
                             <!-- Title & Icon -->
                             <div class="flex gap-3 mb-4">
@@ -262,7 +242,7 @@
                                 {{ $viewingManual->fileName }}
                             </h3>
                             <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">
-                                {{ $viewingManual->category }} &bull; {{ $viewingManual->machine ? $viewingManual->machine->name : 'General' }}
+                                {{ $viewingManual->machine ? $viewingManual->machine->name : 'General' }}
                             </p>
                         </div>
                     </div>

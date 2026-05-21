@@ -403,15 +403,7 @@
                             class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-cyan-500/50 transition-colors"
                         />
                     </div>
-                    <select
-                        wire:model.live="docCategory"
-                        class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 focus:outline-none focus:border-cyan-500/50 transition-colors"
-                    >
-                        <option value="" class="bg-white text-slate-700">Todas las categorías</option>
-                        @foreach($categories as $cat)
-                            <option value="{{ $cat }}" class="bg-white text-slate-700">{{ $cat }}</option>
-                        @endforeach
-                    </select>
+
                 </div>
 
                 {{-- Documents List --}}
@@ -457,7 +449,7 @@
                                     <p class="text-xs font-bold text-slate-850 text-slate-800 truncate group-hover:text-cyan-600 transition-colors uppercase">{{ $manual->fileName }}</p>
                                     <div class="flex items-center gap-2 mt-0.5">
                                         <span class="text-[10px] text-slate-400 font-mono">{{ number_format($manual->size / 1024, 1) }} KB</span>
-                                        <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">{{ $manual->category }}</span>
+
                                         @if($manual->in_chat)
                                             <span class="text-[9px] font-black text-emerald-600 uppercase tracking-widest">RAG</span>
                                         @endif
