@@ -576,9 +576,14 @@ class AdminDashboard extends Component
                 // Extract text depending on file type
                 $text = '';
                 if ($fileType === 'pdf') {
-                    $parser = new Parser();
-                    $pdf = $parser->parseFile($fullPath);
-                    $text = $pdf->getText();
+                    try {
+                        $parser = new Parser();
+                        $pdf = $parser->parseFile($fullPath);
+                        $text = $pdf->getText();
+                    } catch (\Exception $pdfEx) {
+                        // Catch secured/encrypted/unsupported PDF errors so upload doesn't fail
+                        $text = "Documento PDF protegido, encriptado o con formato no soportado. El archivo se ha subido correctamente, pero no se pudo extraer el texto automáticamente para el asistente virtual.";
+                    }
                 } elseif ($fileType === 'word' && $ext === 'docx') {
                     $text = $this->extractTextFromDocx($fullPath);
                 } elseif ($fileType === 'excel' && $ext === 'xlsx') {
