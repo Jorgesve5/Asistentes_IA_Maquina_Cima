@@ -45,6 +45,11 @@ class AdminDashboard extends Component
     public $isGeneratingSuggestion = false;
     public $messagesCount = 0;
 
+    // Training content states
+    public $selectedMachineForTraining = '';
+    public $manualContent = '';
+    public $faqContent = '';
+
     public function mount()
     {
         if (!Auth::check()) {
@@ -62,6 +67,11 @@ class AdminDashboard extends Component
                 'text' => "¡Hola! Soy el asistente virtual de la **{$firstMachine->name}** (Modo Admin). ¿Qué deseas probar hoy?",
                 'timestamp' => now()->format('H:i')
             ];
+
+            // Initialize training content
+            $this->selectedMachineForTraining = $firstMachine->id;
+            $this->manualContent = $firstMachine->manual_content ?? '';
+            $this->faqContent = $firstMachine->faq_content ?? '';
         }
 
         // Initialize selected machine for messages
@@ -110,6 +120,35 @@ class AdminDashboard extends Component
                     'timestamp' => now()->format('H:i')
                 ]
             ];
+        }
+    }
+
+    // Training machine selector changed
+    public function updatedSelectedMachineForTraining($value)
+    {
+        $machine = Machine::find($value);
+        if ($machine) {
+            $this->manualContent = $machine->manual_content ?? '';
+            $this->faqContent = $machine->faq_content ?? '';
+        } else {
+            $this->manualContent = '';
+            $this->faqContent = '';
+        }
+        $this->dispatch('trainingContentUpdated', manual: $this->manualContent, faq: $this->faqContent);
+    }
+
+    // Save training content
+    public function saveTrainingContent($manual, $faq)
+    {
+        $this->manualContent = $manual;
+        $this->faqContent = $faq;
+        $machine = Machine::find($this->selectedMachineForTraining);
+        if ($machine) {
+            $machine->update([
+                'manual_content' => $this->manualContent,
+                'faq_content' => $this->faqContent
+            ]);
+            session()->flash('training_success', "Contenidos actualizados con éxito.");
         }
     }
 

@@ -46,8 +46,8 @@
     <!-- Main Grid: Spec + Upload, Chatbot, Supervisor Chat -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-        <!-- Column 1: Info & Manuals Manager (4 cols) -->
-        <div class="lg:col-span-4 flex flex-col gap-6">
+        <!-- Column 1: Info & Manuals Manager (3 cols) -->
+        <div class="lg:col-span-3 flex flex-col gap-6">
             
             <!-- Specs Card -->
             <div class="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
@@ -125,7 +125,7 @@
             </div>
 
             <!-- Historial de Errores IA Quick Access -->
-            <div class="mt-4">
+            <div class="mt-4 flex flex-col gap-3">
                 <button
                     type="button"
                     wire:click="openErrorsModal"
@@ -137,39 +137,60 @@
                     </svg>
                     <span>Historial de Errores</span>
                 </button>
+                <button
+                    type="button"
+                    wire:click="openTrainingModal"
+                    onclick="window.playAudio('click');"
+                    class="w-full py-3 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 hover:text-cyan-800 rounded-3xl border border-cyan-200/80 font-black text-xs tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-2 shadow-sm"
+                >
+                    <svg class="h-4.5 w-4.5 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    <span>Formación</span>
+                </button>
+                <button
+                    type="button"
+                    wire:click="openFaqModal"
+                    onclick="window.playAudio('click');"
+                    class="w-full py-3 bg-fuchsia-50 hover:bg-fuchsia-100 text-fuchsia-700 hover:text-fuchsia-800 rounded-3xl border border-fuchsia-200/80 font-black text-xs tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-2 shadow-sm"
+                >
+                    <svg class="h-4.5 w-4.5 text-fuchsia-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Preguntas Frecuentes</span>
+                </button>
             </div>
         </div>
 
-        <!-- Column 2: Chatbot Console (5 cols) -->
-        <div class="lg:col-span-5 flex flex-col bg-white border border-slate-200 rounded-3xl h-[560px] shadow-sm overflow-hidden relative">
+        <!-- Column 2: Chatbot Console (6 cols) -->
+        <div class="lg:col-span-6 flex flex-col bg-white ring-1 ring-cyan-500/20 rounded-3xl h-[700px] shadow-2xl shadow-cyan-900/5 overflow-hidden relative">
             <!-- Console Header -->
-            <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-                <div class="flex items-center gap-2">
-                    <span class="h-2 w-2 rounded-full bg-cyan-500 animate-pulse"></span>
-                    <span class="text-xs font-black text-slate-800 tracking-wider uppercase font-outfit">Asistente IA (RAG)</span>
+            <div class="px-6 py-4 flex items-center justify-between bg-slate-900 border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="relative flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-cyan-500 shadow-[0_0_8px_rgba(34,211,238,0.8)]"></span>
+                    </div>
+                    <span class="text-[15px] font-black text-white tracking-widest uppercase font-outfit drop-shadow-sm truncate">Asistente IA</span>
                 </div>
-                <div class="flex items-center gap-2">
-                    <span class="text-[8px] font-mono text-cyan-600 bg-cyan-50 px-2 py-0.5 border border-cyan-100 rounded-full uppercase tracking-widest hidden sm:inline-block">
-                        Asistente Activo
-                    </span>
+                <div class="flex items-center gap-3">
                     <button
                         wire:click="clearChatHistory"
                         onclick="window.playAudio('click');"
                         title="Limpiar el historial de la conversación"
-                        class="flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-500 hover:text-rose-600 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all duration-200 group shadow-sm"
+                        class="flex items-center justify-center h-8 w-8 bg-slate-800/80 hover:bg-rose-500/20 border border-slate-700/50 hover:border-rose-500/30 text-slate-400 hover:text-rose-400 rounded-full transition-all duration-200"
                     >
-                        <svg class="h-3.5 w-3.5 group-hover:rotate-12 transition-transform text-slate-400 group-hover:text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
-                        <span class="hidden sm:inline">Limpiar Chat</span>
                     </button>
                     <button
                         wire:click="openDocExplorer"
                         onclick="window.playAudio('click');"
                         title="Ver recursos y manuales de esta máquina"
-                        class="flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 hover:border-cyan-500/40 text-slate-600 hover:text-cyan-600 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all duration-200 group shadow-sm"
+                        class="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-800/80 hover:bg-cyan-500/20 border border-slate-700/50 hover:border-cyan-500/40 text-slate-300 hover:text-cyan-400 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all duration-200"
                     >
-                        <svg class="h-3.5 w-3.5 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                         </svg>
                         <span class="hidden sm:inline">Recursos</span>
@@ -180,32 +201,34 @@
             <!-- Messages Logs -->
             <div
                 id="chatbot-box"
-                class="flex-1 overflow-y-auto p-5 space-y-4 font-sans text-xs scroll-smooth bg-slate-50/30"
+                class="flex-1 overflow-y-auto p-6 space-y-5 font-sans text-sm scroll-smooth bg-gradient-to-b from-white to-slate-50/50"
                 x-init="$watch('$wire.chatMessages', () => { setTimeout(() => { $el.scrollTop = $el.scrollHeight }, 100) })"
             >
                 @foreach($chatMessages as $msg)
                     <div class="flex {{ $msg['sender'] === 'user' ? 'justify-end' : 'justify-start' }}">
-                        <div class="max-w-[85%] rounded-[18px] px-4 py-3 border {{ $msg['sender'] === 'user' ? 'bg-cyan-50/80 border-cyan-100 text-slate-800 shadow-sm' : 'bg-white border-slate-200/80 text-slate-700 shadow-sm' }}">
+                        <div class="max-w-[85%] rounded-[20px] px-6 py-4 shadow-sm {{ $msg['sender'] === 'user' ? 'bg-gradient-to-br from-slate-800 to-slate-900 text-white rounded-tr-sm border border-slate-700/50' : 'bg-white border border-slate-200/60 text-slate-700 rounded-tl-sm shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)]' }}">
                             @if($msg['sender'] === 'bot')
                                 <!-- Bot Icon -->
-                                <div class="flex items-center gap-1.5 mb-1.5 border-b border-slate-100 pb-1 text-[9px] font-black tracking-widest text-cyan-600 uppercase">
-                                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                    </svg>
-                                    <span>ASISTENTE VIRTUAL</span>
+                                <div class="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100/80">
+                                    <div class="bg-cyan-50 p-1.5 rounded-lg border border-cyan-100 text-cyan-600">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                        </svg>
+                                    </div>
+                                    <span class="text-[11px] font-black tracking-widest text-slate-800 uppercase">Asistente Virtual</span>
                                 </div>
                             @endif
                             @if(!empty($msg['image_url']))
                                 <div class="mb-2">
-                                    <img src="{{ $msg['image_url'] }}" class="max-h-48 rounded-lg border border-slate-200 object-contain cursor-pointer" onclick="window.open('{{ $msg['image_url'] }}', '_blank')" />
+                                    <img src="{{ $msg['image_url'] }}" class="max-h-56 rounded-lg border border-slate-200 object-contain cursor-pointer" onclick="window.open('{{ $msg['image_url'] }}', '_blank')" />
                                 </div>
                             @endif
                             @if(!empty($msg['text']))
-                                <div class="leading-relaxed whitespace-pre-line prose prose-xs text-slate-700">
+                                <div class="leading-relaxed whitespace-pre-line prose prose-sm max-w-none {{ $msg['sender'] === 'user' ? 'text-slate-100 prose-invert' : 'text-slate-700' }}">
                                     {!! nl2br(e($msg['text'])) !!}
                                 </div>
                             @endif
-                            <span class="block text-[8px] font-mono text-slate-400 text-right mt-1.5">{{ $msg['timestamp'] }}</span>
+                            <span class="block text-[10px] font-mono {{ $msg['sender'] === 'user' ? 'text-slate-400' : 'text-slate-400' }} text-right mt-3 opacity-80">{{ $msg['timestamp'] }}</span>
                         </div>
                     </div>
                 @endforeach
@@ -213,127 +236,121 @@
                 <!-- Thinking Spinner Animation -->
                 @if($isThinking)
                     <div class="flex justify-start" wire:init="getBotResponse">
-                        <div class="bg-white border border-slate-200 rounded-[18px] px-4 py-3 text-slate-500 max-w-[80%] shadow-sm">
-                            <div class="flex items-center gap-2">
-                                <div class="flex gap-1">
-                                    <span class="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce"></span>
-                                    <span class="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce [animation-delay:0.2s]"></span>
-                                    <span class="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce [animation-delay:0.4s]"></span>
-                                </div>
-                                <span class="text-[9px] font-mono text-slate-400 uppercase tracking-widest">Analizando manuales...</span>
+                        <div class="bg-white border border-slate-200/60 rounded-[20px] px-6 py-4 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] rounded-tl-sm flex items-center gap-3">
+                            <div class="flex gap-1.5">
+                                <span class="h-2 w-2 rounded-full bg-cyan-500 animate-bounce"></span>
+                                <span class="h-2 w-2 rounded-full bg-cyan-400 animate-bounce [animation-delay:0.2s]"></span>
+                                <span class="h-2 w-2 rounded-full bg-cyan-300 animate-bounce [animation-delay:0.4s]"></span>
                             </div>
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Analizando...</span>
                         </div>
                     </div>
                 @endif
             </div>
 
-            <!-- Console Inputs -->
-            <form wire:submit.prevent="sendChatbotMessage" class="p-4 border-t border-slate-200 bg-slate-50 flex flex-col gap-2">
-                <!-- Image attachment preview -->
-                @if($imageAttachment)
-                    <div class="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-xl relative max-w-max shadow-sm">
-                        <img src="{{ $imageAttachment->temporaryUrl() }}" class="h-14 w-14 object-cover rounded-lg border border-slate-100" />
+            <!-- Console Inputs (Modern Floating Bar) -->
+            <div class="p-6 bg-gradient-to-t from-white via-white to-transparent shrink-0">
+                <form wire:submit.prevent="sendChatbotMessage" class="relative flex flex-col gap-3">
+                    
+                    <!-- Image attachment preview -->
+                    @if($imageAttachment)
+                        <div class="flex items-center gap-2 p-1.5 bg-white border border-slate-200 rounded-xl max-w-max shadow-sm ml-2">
+                            <img src="{{ $imageAttachment->temporaryUrl() }}" class="h-12 w-12 object-cover rounded-lg border border-slate-100" />
+                            <button
+                                type="button"
+                                wire:click="$set('imageAttachment', null)"
+                                class="bg-red-50 hover:bg-red-100 text-red-500 rounded-lg p-2 transition-colors h-12 flex items-center justify-center"
+                            >
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    @endif
+
+                    <!-- Input Pill Container -->
+                    <div class="flex items-center bg-white border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-full p-1.5 transition-all focus-within:shadow-[0_8px_30px_rgb(6,182,212,0.1)] focus-within:border-cyan-300/50">
+                        
+                        <!-- Upload Button inside pill -->
+                        <label class="cursor-pointer h-10 w-10 flex items-center justify-center rounded-full text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 transition-colors shrink-0 relative">
+                            <input
+                                type="file"
+                                wire:model="imageAttachment"
+                                accept="image/*"
+                                class="hidden"
+                            />
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            </svg>
+                            <!-- Loading spinner -->
+                            <div wire:loading wire:target="imageAttachment" class="absolute inset-0 bg-white/90 rounded-full flex items-center justify-center">
+                                <svg class="animate-spin h-4 w-4 text-cyan-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+                        </label>
+
+                        <!-- Input Field -->
+                        <input
+                            type="text"
+                            wire:model="userInput"
+                            placeholder="Pregúntame cualquier duda..."
+                            class="flex-1 bg-transparent border-none px-3 text-[15px] text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-0"
+                        />
+
+                        <!-- Submit Button inside pill -->
                         <button
-                            type="button"
-                            wire:click="$set('imageAttachment', null)"
-                            class="absolute -top-1.5 -right-1.5 bg-red-500 hover:bg-red-400 text-white rounded-full p-1 shadow-md active:scale-90 transition-all flex items-center justify-center"
+                            type="submit"
+                            class="h-10 w-10 bg-cyan-600 hover:bg-cyan-500 text-white rounded-full flex items-center justify-center shrink-0 transition-colors shadow-sm"
                         >
-                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            <svg class="h-4 w-4 ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16M14 6l6 6-6 6" />
                             </svg>
                         </button>
                     </div>
-                @endif
-
-                <div class="flex items-center gap-2">
-                    <!-- Image Upload Button -->
-                    <label class="cursor-pointer p-2.5 bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-xl border border-slate-200 transition-colors flex items-center justify-center relative shadow-sm shrink-0">
-                        <input
-                            type="file"
-                            wire:model="imageAttachment"
-                            accept="image/*"
-                            class="hidden"
-                        />
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <!-- Loading spinner for image upload -->
-                        <div wire:loading wire:target="imageAttachment" class="absolute inset-0 bg-white/90 rounded-xl flex items-center justify-center">
-                            <svg class="animate-spin h-4 w-4 text-cyan-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                        </div>
-                    </label>
-
-                    <input
-                        type="text"
-                        wire:model="userInput"
-                        placeholder="Pregúntame o sube una imagen del fallo..."
-                        class="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-cyan-500/50 transition-colors shadow-sm"
-                    />
-                    <button
-                        type="submit"
-                        class="p-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center justify-center shrink-0"
-                    >
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
-                    </button>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
 
         <!-- Column 3: Supervisor Chat Console (3 cols) -->
-        <div class="lg:col-span-3 flex flex-col bg-white border border-slate-200 rounded-3xl h-[560px] shadow-sm overflow-hidden relative">
+        <div class="lg:col-span-3 flex flex-col bg-white border border-slate-200 rounded-3xl h-[700px] shadow-sm overflow-hidden relative">
             <!-- Chat Header -->
             <div class="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                    <svg class="h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <svg class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
                     </svg>
-                    <span class="text-xs font-black text-slate-800 tracking-wider uppercase font-outfit">Canal Supervisor</span>
+                    <span class="text-sm font-black text-slate-800 tracking-wider uppercase font-outfit">Canal Supervisor</span>
                 </div>
             </div>
 
             <!-- Messages Log -->
             <div
                 id="supervisor-box"
-                class="flex-1 overflow-y-auto p-4 space-y-3 text-xs scroll-smooth bg-slate-50/30"
+                class="flex-1 overflow-y-auto p-4 space-y-3 text-sm scroll-smooth bg-slate-50/30"
                 x-init="$watch('$wire.supervisorMessages', () => { setTimeout(() => { $el.scrollTop = $el.scrollHeight }, 100) })"
             >
                 @if($supervisorMessages->isEmpty())
                     <div class="py-12 text-center">
-                        <svg class="h-6 w-6 text-slate-400 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <svg class="h-8 w-8 text-slate-400 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                         </svg>
-                        <p class="text-[10px] font-mono text-slate-400">Canal vacío. Escribe para dar aviso.</p>
+                        <p class="text-xs font-mono text-slate-400">Canal vacío. Escribe para dar aviso.</p>
                     </div>
                 @else
                     @foreach($supervisorMessages as $msg)
-                        <div class="group relative flex flex-col gap-1 rounded-2xl p-3 border {{ $msg->from === 'admin' ? 'bg-amber-50 border-amber-200/60' : 'bg-white border-slate-200' }} shadow-sm">
+                        <div class="group relative flex flex-col gap-1 rounded-2xl p-4 border {{ $msg->from === 'admin' ? 'bg-amber-50 border-amber-200/60' : 'bg-white border-slate-200' }} shadow-sm">
                             
-                            <!-- Delete message on hover (restricted to admins) -->
-                            @auth
-                                <button
-                                    style="cursor: pointer;"
-                                    wire:click="deleteSupervisorMessage('{{ $msg->id }}')"
-                                    onclick="window.playAudio('click');"
-                                    class="absolute top-2 right-2 text-slate-400 hover:text-red-650 text-red-600 opacity-0 group-hover:opacity-100 transition-all"
-                                >
-                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                </button>
-                            @endauth
-
-                            <div class="flex items-center justify-between border-b border-slate-100 pb-1">
-                                <span class="text-[9px] font-black uppercase tracking-wider {{ $msg->from === 'admin' ? 'text-amber-700' : 'text-slate-500' }}">
+                            <div class="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                                <span class="text-[10px] font-black uppercase tracking-wider {{ $msg->from === 'admin' ? 'text-amber-700' : 'text-slate-500' }}">
                                     {{ $msg->senderName }}
                                 </span>
-                                <span class="text-[8px] font-mono text-slate-400">{{ $msg->timestamp }}</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[9px] font-mono text-slate-400">{{ $msg->timestamp }}</span>
+                                </div>
                             </div>
-                            <p class="text-[11px] leading-relaxed text-slate-705 text-slate-700 mt-1 whitespace-pre-wrap">{{ $msg->text }}</p>
+                            <p class="text-sm leading-relaxed text-slate-705 text-slate-700 mt-1 whitespace-pre-wrap">{{ $msg->text }}</p>
                         </div>
                     @endforeach
                 @endif
@@ -345,7 +362,7 @@
                     type="text"
                     wire:model="supervisorInput"
                     placeholder="Escribe aviso..."
-                    class="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-500/40 transition-colors shadow-sm"
+                    class="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-500/40 transition-colors shadow-sm"
                 />
                 <button
                     type="submit"
@@ -684,6 +701,176 @@
                                     </div>
                                 </div>
                             @endforeach
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- ── Formación Modal (Solo Manual) ── --}}
+    @if($showTrainingModal)
+        <div
+            class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-[90]"
+            wire:click.self="closeTrainingModal"
+        >
+            <div class="w-full max-w-4xl max-h-[85vh] bg-white border border-slate-200 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+                {{-- Modal Header --}}
+                <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50 flex-shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="h-8 w-8 bg-cyan-50 border border-cyan-200 rounded-lg flex items-center justify-center text-cyan-600 shadow-sm">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-black text-slate-800 uppercase tracking-wider">Manual de Formación</h3>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">{{ $machine->name }}</p>
+                        </div>
+                    </div>
+                    <button wire:click="closeTrainingModal" class="text-slate-400 hover:text-slate-700 transition-colors">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                {{-- Modal Body --}}
+                <div class="flex-1 overflow-y-auto p-6 sm:p-8 bg-white">
+                    @if(empty(trim(strip_tags($machine->manual_content))))
+                        <div class="py-20 text-center">
+                            <div class="h-16 w-16 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 mx-auto mb-4 shadow-sm">
+                                <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                </svg>
+                            </div>
+                            <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest">Sin manual de aprendizaje</h4>
+                            <p class="text-[11px] font-medium text-slate-500 mt-1 max-w-sm mx-auto">El administrador aún no ha añadido material formativo para esta máquina.</p>
+                        </div>
+                    @else
+                        <div class="prose prose-sm max-w-none text-slate-700 ql-editor" x-data="{
+                            renderPreview() {
+                                let html = this.$refs.rawContent.innerHTML;
+                                if (!html || !html.trim()) return '';
+                                let div = document.createElement('div');
+                                div.innerHTML = html;
+                                
+                                let elements = Array.from(div.children);
+                                let out = '';
+                                let inAccordion = false;
+                                let accordionHtml = '';
+                                
+                                elements.forEach(el => {
+                                    if (el.tagName === 'H3' && el.innerText.includes('❓')) {
+                                        if (inAccordion) {
+                                            out += `<div class='mt-4 pt-4 border-t border-slate-100 text-slate-600 text-sm leading-relaxed'>` + accordionHtml + `</div></details>`;
+                                        }
+                                        inAccordion = true;
+                                        accordionHtml = '';
+                                        out += `<details class='bg-white border border-slate-200 rounded-xl my-4 p-4 shadow-sm cursor-pointer group'><summary class='font-black text-base text-slate-800 list-none flex items-center gap-2 outline-none'><span class='text-fuchsia-600 text-lg group-open:rotate-90 transition-transform'>▶</span> ` + el.innerHTML.replace('❓', '') + `</summary>`;
+                                    } else {
+                                        if (inAccordion) {
+                                            accordionHtml += el.outerHTML;
+                                        } else {
+                                            out += el.outerHTML;
+                                        }
+                                    }
+                                });
+                                
+                                if (inAccordion) {
+                                    out += `<div class='mt-4 pt-4 border-t border-slate-100 text-slate-600 text-sm leading-relaxed'>` + accordionHtml + `</div></details>`;
+                                }
+                                
+                                return out;
+                            }
+                        }">
+                            <div x-ref="rawContent" style="display: none;">{!! $machine->manual_content !!}</div>
+                            <div x-html="renderPreview()"></div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- ── Preguntas Frecuentes Modal ── --}}
+    @if($showFaqModal)
+        <div
+            class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-[90]"
+            wire:click.self="closeFaqModal"
+        >
+            <div class="w-full max-w-4xl max-h-[85vh] bg-white border border-slate-200 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+                {{-- Modal Header --}}
+                <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50 flex-shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="h-8 w-8 bg-fuchsia-50 border border-fuchsia-200 rounded-lg flex items-center justify-center text-fuchsia-600 shadow-sm">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-black text-slate-800 uppercase tracking-wider">Preguntas Frecuentes</h3>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">{{ $machine->name }}</p>
+                        </div>
+                    </div>
+                    <button wire:click="closeFaqModal" class="text-slate-400 hover:text-slate-700 transition-colors">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                {{-- Modal Body --}}
+                <div class="flex-1 overflow-y-auto p-6 sm:p-8 bg-white">
+                    @if(empty(trim(strip_tags($machine->faq_content))))
+                        <div class="py-20 text-center">
+                            <div class="h-16 w-16 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 mx-auto mb-4 shadow-sm">
+                                <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest">Sin Preguntas Frecuentes</h4>
+                            <p class="text-[11px] font-medium text-slate-500 mt-1 max-w-sm mx-auto">El administrador aún no ha añadido un listado de preguntas frecuentes para esta unidad.</p>
+                        </div>
+                    @else
+                        <div class="prose prose-sm max-w-none text-slate-700 ql-editor" x-data="{
+                            renderPreview() {
+                                let html = this.$refs.rawContent.innerHTML;
+                                if (!html || !html.trim()) return '';
+                                let div = document.createElement('div');
+                                div.innerHTML = html;
+                                
+                                let elements = Array.from(div.children);
+                                let out = '';
+                                let inAccordion = false;
+                                let accordionHtml = '';
+                                
+                                elements.forEach(el => {
+                                    if (el.tagName === 'H3' && el.innerText.includes('❓')) {
+                                        if (inAccordion) {
+                                            out += `<div class='mt-4 pt-4 border-t border-slate-100 text-slate-600 text-sm leading-relaxed'>` + accordionHtml + `</div></details>`;
+                                        }
+                                        inAccordion = true;
+                                        accordionHtml = '';
+                                        out += `<details class='bg-white border border-slate-200 rounded-xl my-4 p-4 shadow-sm cursor-pointer group'><summary class='font-black text-base text-slate-800 list-none flex items-center gap-2 outline-none'><span class='text-fuchsia-600 text-lg group-open:rotate-90 transition-transform'>▶</span> ` + el.innerHTML.replace('❓', '') + `</summary>`;
+                                    } else {
+                                        if (inAccordion) {
+                                            accordionHtml += el.outerHTML;
+                                        } else {
+                                            out += el.outerHTML;
+                                        }
+                                    }
+                                });
+                                
+                                if (inAccordion) {
+                                    out += `<div class='mt-4 pt-4 border-t border-slate-100 text-slate-600 text-sm leading-relaxed'>` + accordionHtml + `</div></details>`;
+                                }
+                                
+                                return out;
+                            }
+                        }">
+                            <div x-ref="rawContent" style="display: none;">{!! $machine->faq_content !!}</div>
+                            <div x-html="renderPreview()"></div>
                         </div>
                     @endif
                 </div>

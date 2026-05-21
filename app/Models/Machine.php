@@ -11,7 +11,7 @@ class Machine extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
-        'id', 'name', 'status', 'serial', 'indicator', 'column', 'row', 'subLabel', 'custom_prompt'
+        'id', 'name', 'status', 'serial', 'indicator', 'column', 'row', 'subLabel', 'custom_prompt', 'training_content', 'manual_content', 'faq_content'
     ];
 
     public function manuals()

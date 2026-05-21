@@ -52,6 +52,13 @@
         >
             Mensajes
         </button>
+        <button
+            wire:click="setTab('training')"
+            onclick="window.playAudio('click');"
+            class="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 {{ $activeTab === 'training' ? 'bg-cyan-500 text-slate-950 shadow-[0_4px_12px_rgba(6,182,212,0.15)]' : 'text-slate-500 hover:text-slate-800' }}"
+        >
+            Formación
+        </button>
     </div>
 
     <!-- ── TAB: Status (Machine States Cards) ── -->
@@ -655,10 +662,21 @@
                                 @endphp
                                 @if($isSystem)
                                     <!-- Centered System Message -->
-                                    <div class="flex justify-center my-2">
+                                    <div class="flex justify-center items-center gap-2 my-2 group">
                                         <div class="px-3.5 py-1 bg-slate-100/85 border border-slate-200 text-slate-500 rounded-full text-[9px] font-mono tracking-wider uppercase font-bold shadow-sm">
                                             {{ $msg->text }}
                                         </div>
+                                        <!-- Delete Message button for System Messages -->
+                                        <button
+                                            wire:click="deleteMessage('{{ $msg->id }}')"
+                                            onclick="window.playAudio('click');"
+                                            class="p-1.5 bg-white hover:bg-red-50 border border-slate-200 hover:border-red-200 text-slate-450 hover:text-red-600 rounded-full shadow-sm transition-all"
+                                            title="Eliminar mensaje del sistema"
+                                        >
+                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
                                     </div>
                                 @else
                                     <div class="flex items-end gap-2.5 {{ $isAdmin ? 'justify-end' : 'justify-start' }}">
@@ -681,11 +699,11 @@
                                                 <p class="text-xs leading-relaxed whitespace-pre-wrap font-sans">{{ $msg->text }}</p>
                                             </div>
                                             
-                                            <!-- Hover Delete Message button -->
+                                            <!-- Delete Message button -->
                                             <button
                                                 wire:click="deleteMessage('{{ $msg->id }}')"
                                                 onclick="window.playAudio('click');"
-                                                class="absolute top-1/2 -translate-y-1/2 {{ $isAdmin ? '-left-8' : '-right-8' }} p-1.5 bg-white hover:bg-red-50 border border-slate-200 hover:border-red-200 text-slate-450 hover:text-red-600 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-all z-10"
+                                                class="absolute top-1/2 -translate-y-1/2 {{ $isAdmin ? '-left-8' : '-right-8' }} p-1.5 bg-white hover:bg-red-50 border border-slate-200 hover:border-red-200 text-slate-450 hover:text-red-600 rounded-full shadow-sm transition-all z-10"
                                                 title="Eliminar mensaje"
                                             >
                                                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -838,6 +856,361 @@
                         Confirmar Cambio
                     </button>
                 </form>
+            </div>
+        </div>
+    @endif
+
+    <!-- ── TAB: Training (Formación) ── -->
+    @if($activeTab === 'training')
+        <div style="display: flex; flex-direction: column; gap: 24px;" x-data="{
+            quill: null,
+            showTools: false,
+            activeSubTab: 'manual',
+            manualContent: @entangle('manualContent'),
+            faqContent: @entangle('faqContent'),
+            
+            init() {
+                if (typeof Quill === 'undefined') {
+                    let link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = 'https://cdn.quilljs.com/1.3.6/quill.snow.css';
+                    document.head.appendChild(link);
+
+                    let script = document.createElement('script');
+                    script.src = 'https://cdn.quilljs.com/1.3.6/quill.js';
+                    script.onload = () => this.initQuill();
+                    document.head.appendChild(script);
+                } else {
+                    this.initQuill();
+                }
+
+                $wire.on('trainingContentUpdated', (e) => {
+                    this.manualContent = e[0].manual || '';
+                    this.faqContent = e[0].faq || '';
+                    
+                    if (this.quill) {
+                        this.quill.root.innerHTML = this.activeSubTab === 'manual' ? this.manualContent : this.faqContent;
+                    }
+                });
+            },
+            initQuill() {
+                this.quill = new Quill($refs.quillEditor, {
+                    theme: 'snow',
+                    modules: {
+                        toolbar: [
+                            [{ 'header': [1, 2, 3, false] }],
+                            ['bold', 'italic', 'underline', 'strike'],
+                            [{ 'color': [] }, { 'background': [] }],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            ['link', 'image', 'video'],
+                            ['clean']
+                        ]
+                    }
+                });
+                
+                this.quill.root.innerHTML = this.manualContent || '';
+                
+                this.quill.on('text-change', () => {
+                    if (this.activeSubTab === 'manual') {
+                        this.manualContent = this.quill.root.innerHTML;
+                    } else {
+                        this.faqContent = this.quill.root.innerHTML;
+                    }
+                });
+            },
+            switchTab(tab) {
+                if (this.activeSubTab === 'manual') this.manualContent = this.quill.root.innerHTML;
+                if (this.activeSubTab === 'faq') this.faqContent = this.quill.root.innerHTML;
+                
+                this.activeSubTab = tab;
+                this.quill.root.innerHTML = tab === 'manual' ? (this.manualContent || '') : (this.faqContent || '');
+            },
+            save() {
+                if (this.quill) {
+                    if (this.activeSubTab === 'manual') this.manualContent = this.quill.root.innerHTML;
+                    if (this.activeSubTab === 'faq') this.faqContent = this.quill.root.innerHTML;
+                    
+                    $wire.saveTrainingContent(this.manualContent, this.faqContent);
+                }
+            },
+            renderPreview(html) {
+                if (!html || !html.trim()) return `<div class='text-slate-400 text-center mt-10 italic'>Sin contenido...</div>`;
+                let div = document.createElement('div');
+                div.innerHTML = html;
+                
+                let elements = Array.from(div.children);
+                let out = '';
+                let inAccordion = false;
+                let accordionHtml = '';
+                
+                elements.forEach(el => {
+                    if (el.tagName === 'H3' && el.innerText.includes('❓')) {
+                        if (inAccordion) {
+                            out += `<div class='mt-4 pt-4 border-t border-slate-100 text-slate-600 text-sm leading-relaxed'>` + accordionHtml + `</div></details>`;
+                        }
+                        inAccordion = true;
+                        accordionHtml = '';
+                        out += `<details class='bg-white border border-slate-200 rounded-xl my-4 p-4 shadow-sm cursor-pointer group'><summary class='font-black text-base text-slate-800 list-none flex items-center gap-2 outline-none'><span class='text-fuchsia-600 text-lg group-open:rotate-90 transition-transform'>▶</span> ` + el.innerHTML.replace('❓', '') + `</summary>`;
+                    } else {
+                        if (inAccordion) {
+                            accordionHtml += el.outerHTML;
+                        } else {
+                            out += el.outerHTML;
+                        }
+                    }
+                });
+                
+                if (inAccordion) {
+                    out += `<div class='mt-4 pt-4 border-t border-slate-100 text-slate-600 text-sm leading-relaxed'>` + accordionHtml + `</div></details>`;
+                }
+                
+                return out;
+            },
+            insertComponent(type) {
+                if (!this.quill) return;
+                
+                let range = this.quill.getSelection(true);
+                let index = range ? range.index : this.quill.getLength();
+                let html = '';
+                
+                if (type === 'warning') {
+                    html = '<div style=\'background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; margin: 16px 0; border-radius: 0 8px 8px 0;\'><strong style=\'color: #991b1b; display: block; margin-bottom: 8px; font-size: 16px;\'>⚠️ Advertencia de Seguridad</strong><p style=\'color: #7f1d1d; margin: 0; font-size: 14px;\'>Escribe aquí las precauciones antes de operar la máquina...</p></div><p><br></p>';
+                } else if (type === 'info') {
+                    html = '<div style=\'background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; margin: 16px 0; border-radius: 0 8px 8px 0;\'><strong style=\'color: #1e3a8a; display: block; margin-bottom: 8px; font-size: 16px;\'>ℹ️ Información Importante</strong><p style=\'color: #1e40af; margin: 0; font-size: 14px;\'>Escribe aquí datos clave o aclaraciones operativas...</p></div><p><br></p>';
+                } else if (type === 'step') {
+                    html = '<div style=\'background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 16px 0;\'><h3 style=\'color: #0f172a; margin-top: 0; margin-bottom: 12px; font-size: 18px;\'>Paso 1: Título de la acción</h3><p style=\'color: #475569; margin-bottom: 0; font-size: 14px;\'>Describe detalladamente las instrucciones a realizar...</p></div><p><br></p>';
+                } else if (type === 'accordion') {
+                    html = '<h3><span style=\'color: #a855f7;\'>❓</span> <strong>Pregunta Frecuente (Edita este título)</strong></h3><p>Escribe aquí la respuesta a la pregunta...</p><p><br></p>';
+                }
+                
+                this.quill.clipboard.dangerouslyPasteHTML(index, html);
+                this.showTools = false;
+            }
+        }">
+            
+            <!-- Premium Clean Header -->
+            <div style="background-color: #ffffff; border-radius: 32px; padding: 32px 40px; border: 1px solid #e2e8f0; box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05);">
+                <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 32px;">
+                    
+                    <!-- Left Side: Title and Text -->
+                    <div style="flex: 1 1 500px; min-width: 0;">
+                        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px;">
+                            <div style="height: 56px; width: 56px; flex-shrink: 0; border-radius: 16px; display: flex; align-items: center; justify-content: center; background-color: #ecfeff; border: 1px solid #cffafe; color: #0891b2;">
+                                <svg style="height: 28px; width: 28px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                </svg>
+                            </div>
+                            <h2 style="font-size: 22px; font-weight: 900; color: #1e293b; letter-spacing: 0.1em; text-transform: uppercase; margin: 0; font-family: 'Outfit', sans-serif;">Gestión de Formación</h2>
+                        </div>
+                        <p style="font-size: 15px; letter-spacing: 0.025em; color: #64748b; line-height: 1.6; margin: 0; max-width: 800px; font-family: ui-sans-serif, system-ui, sans-serif;">
+                            Diseña y organiza el material de ayuda visual para los operarios. Selecciona una unidad del sistema en el panel derecho para comenzar a crear o actualizar su documentación interactiva.
+                        </p>
+                    </div>
+
+                    <!-- Right Side: Selector -->
+                    <div style="flex: 0 0 320px; width: 100%;">
+                        <label style="display: block; font-size: 11px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; padding-left: 4px;">Unidad Seleccionada</label>
+                        <div style="position: relative;">
+                            <select
+                                wire:model.live="selectedMachineForTraining"
+                                style="width: 100%; display: block; background-color: #f8fafc; border: 2px solid #e2e8f0; color: #0f172a; padding: 14px 16px; border-radius: 16px; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; outline: none; appearance: none; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2364748b%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 16px top 50%; background-size: 10px auto;"
+                            >
+                                @foreach($machines as $m)
+                                    <option value="{{ $m->id }}">{{ $m->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+
+            @if(session()->has('training_success'))
+                <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; padding: 16px 24px; border-radius: 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+                    <div style="height: 32px; width: 32px; border-radius: 50%; background-color: #d1fae5; display: flex; align-items: center; justify-content: center; color: #059669;">
+                        <svg style="height: 20px; width: 20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <span style="color: #065f46; font-size: 13px; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase;">{{ session('training_success') }}</span>
+                </div>
+            @endif
+
+            <!-- Premium Sub Tabs -->
+            <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 8px; padding: 8px; background-color: #f8fafc; border-radius: 24px; border: 1px solid #e2e8f0; max-width: max-content;">
+                <button 
+                    type="button" 
+                    @click="switchTab('manual')" 
+                    style="padding: 14px 28px; border-radius: 16px; font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid transparent; display: flex; align-items: center; gap: 10px;"
+                    :style="{ 
+                        background: activeSubTab === 'manual' ? 'linear-gradient(135deg, #0ea5e9, #2563eb)' : 'transparent', 
+                        color: activeSubTab === 'manual' ? 'white' : '#64748b', 
+                        boxShadow: activeSubTab === 'manual' ? '0 10px 25px -5px rgba(14, 165, 233, 0.4)' : 'none', 
+                        transform: activeSubTab === 'manual' ? 'translateY(-2px)' : 'none' 
+                    }"
+                >
+                    <svg style="height: 20px; width: 20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    <span style="white-space: nowrap;">Manual de Aprendizaje</span>
+                </button>
+                <button 
+                    type="button" 
+                    @click="switchTab('faq')" 
+                    style="padding: 14px 28px; border-radius: 16px; font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid transparent; display: flex; align-items: center; gap: 10px;"
+                    :style="{ 
+                        background: activeSubTab === 'faq' ? 'linear-gradient(135deg, #8b5cf6, #c026d3)' : 'transparent', 
+                        color: activeSubTab === 'faq' ? 'white' : '#64748b', 
+                        boxShadow: activeSubTab === 'faq' ? '0 10px 25px -5px rgba(192, 38, 211, 0.4)' : 'none', 
+                        transform: activeSubTab === 'faq' ? 'translateY(-2px)' : 'none' 
+                    }"
+                >
+                    <svg style="height: 20px; width: 20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span style="white-space: nowrap;">Preguntas Frecuentes</span>
+                </button>
+            </div>
+
+            <!-- Editor and Preview Section -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 24px; margin-top: 16px;">
+                
+                <!-- Left: Editor -->
+                <div style="background-color: #ffffff; border-radius: 32px; box-shadow: 0 10px 40px -10px rgba(0,0,0,0.08); overflow: hidden; border: 1px solid #e2e8f0; display: flex; flex-direction: column;">
+                    <div style="border-bottom: 1px solid #f1f5f9; background-color: #f8fafc; padding: 20px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="position: relative; display: flex; height: 12px; width: 12px;">
+                                <span style="position: absolute; display: inline-flex; height: 100%; width: 100%; border-radius: 50%; background-color: #22d3ee; opacity: 0.75; animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;"></span>
+                                <span style="position: relative; display: inline-flex; border-radius: 50%; height: 12px; width: 12px; background-color: #06b6d4;"></span>
+                            </div>
+                            <div>
+                                <span style="display: block; font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; line-height: 1; margin-bottom: 4px;">Entorno de Autor</span>
+                                <span style="display: block; font-size: 15px; font-weight: 700; color: #1e293b;">Editor de Contenido</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 16px;">
+                            
+                            <!-- Dropdown Añadir Bloque -->
+                            <div style="position: relative;" @click.away="showTools = false">
+                                <button 
+                                    @click="showTools = !showTools"
+                                    type="button" 
+                                    style="padding: 10px 20px; background-color: white; border: 1px solid #cbd5e1; color: #475569; font-size: 13px; font-weight: 700; border-radius: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s; white-space: nowrap; flex-shrink: 0;"
+                                    onmouseover="this.style.borderColor='#94a3b8'; this.style.color='#1e293b';"
+                                    onmouseout="this.style.borderColor='#cbd5e1'; this.style.color='#475569';"
+                                >
+                                    <svg style="height: 16px; width: 16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                    <span>Añadir Bloque</span>
+                                    <svg style="height: 14px; width: 14px; transition: transform 0.2s;" x-bind:style="showTools ? 'transform: rotate(180deg);' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+
+                                <!-- Dropdown Menu -->
+                                <div x-show="showTools" x-transition.opacity.duration.200ms style="display: none; position: absolute; right: 0; top: 100%; margin-top: 8px; width: 250px; background-color: white; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; z-index: 50; overflow: hidden; padding: 8px;">
+                                    <div style="padding: 8px 12px; font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid #f1f5f9; margin-bottom: 4px;">Componentes Profesionales</div>
+                                    
+                                    <button @click="insertComponent('accordion')" type="button" style="width: 100%; text-align: left; padding: 10px 12px; border: none; background: transparent; border-radius: 8px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#faf5ff';" onmouseout="this.style.backgroundColor='transparent';">
+                                        <span style="font-size: 18px;">❓</span>
+                                        <div>
+                                            <div style="font-size: 13px; font-weight: 700; color: #7e22ce;">Pregunta Desplegable</div>
+                                            <div style="font-size: 11px; color: #a855f7;">Acordeón para FAQs</div>
+                                        </div>
+                                    </button>
+                                    <button @click="insertComponent('warning')" type="button" style="width: 100%; text-align: left; padding: 10px 12px; border: none; background: transparent; border-radius: 8px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#fef2f2';" onmouseout="this.style.backgroundColor='transparent';">
+                                        <span style="font-size: 18px;">⚠️</span>
+                                        <div>
+                                            <div style="font-size: 13px; font-weight: 700; color: #991b1b;">Alerta Precaución</div>
+                                            <div style="font-size: 11px; color: #f87171;">Destacar riesgos operativos</div>
+                                        </div>
+                                    </button>
+                                    
+                                    <button @click="insertComponent('info')" type="button" style="width: 100%; text-align: left; padding: 10px 12px; border: none; background: transparent; border-radius: 8px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#eff6ff';" onmouseout="this.style.backgroundColor='transparent';">
+                                        <span style="font-size: 18px;">ℹ️</span>
+                                        <div>
+                                            <div style="font-size: 13px; font-weight: 700; color: #1e40af;">Nota Informativa</div>
+                                            <div style="font-size: 11px; color: #60a5fa;">Aclaraciones y consejos útiles</div>
+                                        </div>
+                                    </button>
+                                    
+                                    <button @click="insertComponent('step')" type="button" style="width: 100%; text-align: left; padding: 10px 12px; border: none; background: transparent; border-radius: 8px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f8fafc';" onmouseout="this.style.backgroundColor='transparent';">
+                                        <span style="font-size: 18px;">📋</span>
+                                        <div>
+                                            <div style="font-size: 13px; font-weight: 700; color: #334155;">Paso de Guía</div>
+                                            <div style="font-size: 11px; color: #94a3b8;">Bloque para tutoriales</div>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                @click="save(); window.playAudio('success');"
+                                style="padding: 12px 32px; background: linear-gradient(to right, #0891b2, #2563eb); color: white; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; border-radius: 16px; border: none; cursor: pointer; box-shadow: 0 8px 20px rgba(6,182,212,0.3); display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+                                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 12px 25px rgba(6,182,212,0.4)'"
+                                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 20px rgba(6,182,212,0.3)'"
+                            >
+                                <svg style="height: 18px; width: 18px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                </svg>
+                                <span>Publicar Cambios</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div wire:ignore style="position: relative; background-color: #ffffff;">
+                        <style>
+                            .ql-toolbar.ql-snow {
+                                border: none !important;
+                                border-bottom: 1px solid #f1f5f9 !important;
+                                padding: 16px 24px !important;
+                                background-color: #f8fafc;
+                                font-family: inherit;
+                            }
+                            .ql-container.ql-snow {
+                                border: none !important;
+                                font-family: 'Inter', sans-serif !important;
+                                font-size: 15px !important;
+                                color: #334155;
+                            }
+                            .ql-editor {
+                                min-height: 500px;
+                                padding: 32px 48px;
+                                line-height: 1.7;
+                            }
+                            .ql-editor p {
+                                margin-bottom: 1em;
+                            }
+                            .ql-editor h1, .ql-editor h2, .ql-editor h3 {
+                                font-weight: 800;
+                                color: #0f172a;
+                                margin-top: 1.5em;
+                                margin-bottom: 0.5em;
+                            }
+                        </style>
+                        <div x-ref="quillEditor"></div>
+                    </div>
+                </div>
+
+                <!-- Right: Live Preview -->
+                <div style="background-color: #ffffff; border-radius: 32px; box-shadow: 0 10px 40px -10px rgba(0,0,0,0.08); overflow: hidden; border: 1px solid #e2e8f0; display: flex; flex-direction: column; min-height: 600px;">
+                    <div style="border-bottom: 1px solid #f1f5f9; background-color: #f8fafc; padding: 20px 32px; display: flex; align-items: center; gap: 12px;">
+                        <div style="position: relative; display: flex; height: 12px; width: 12px;">
+                            <span style="position: absolute; display: inline-flex; height: 100%; width: 100%; border-radius: 50%; background-color: #a855f7; opacity: 0.75; animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;"></span>
+                            <span style="position: relative; display: inline-flex; border-radius: 50%; height: 12px; width: 12px; background-color: #9333ea;"></span>
+                        </div>
+                        <div>
+                            <span style="display: block; font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; line-height: 1; margin-bottom: 4px;">Previsualización en Directo</span>
+                            <span style="display: block; font-size: 15px; font-weight: 700; color: #1e293b;">Vista del Operario</span>
+                        </div>
+                    </div>
+                    
+                    <div class="ql-editor prose prose-sm max-w-none text-slate-700" style="padding: 32px 48px; overflow-y: auto; flex: 1;" x-html="renderPreview(activeSubTab === 'manual' ? manualContent : faqContent)">
+                    </div>
+                </div>
+                
             </div>
         </div>
     @endif

@@ -26,6 +26,8 @@ class MachineDetail extends Component
     public $docCategory = '';
     public $showDocExplorerModal = false;
     public $showErrorsModal = false;
+    public $showTrainingModal = false;
+    public $showFaqModal = false;
 
     // Viewer modal state
     public $viewingManualId = null;
@@ -543,6 +545,26 @@ class MachineDetail extends Component
     public function closeErrorsModal()
     {
         $this->showErrorsModal = false;
+    }
+
+    public function openTrainingModal()
+    {
+        $this->showTrainingModal = true;
+    }
+
+    public function closeTrainingModal()
+    {
+        $this->showTrainingModal = false;
+    }
+
+    public function openFaqModal()
+    {
+        $this->showFaqModal = true;
+    }
+
+    public function closeFaqModal()
+    {
+        $this->showFaqModal = false;
     }
 
     public function deleteMachineError($id)
