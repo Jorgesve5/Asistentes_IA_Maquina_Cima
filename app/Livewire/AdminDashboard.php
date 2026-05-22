@@ -49,6 +49,7 @@ class AdminDashboard extends Component
     public $selectedMachineForTraining = '';
     public $manualContent = '';
     public $faqContent = '';
+    public $trainingFile;
 
     public function mount()
     {
@@ -150,6 +151,19 @@ class AdminDashboard extends Component
             ]);
             session()->flash('training_success', "Contenidos actualizados con éxito.");
         }
+    }
+
+    // Store a training file and return its public URL
+    public function storeTrainingFile(): ?string
+    {
+        if (!$this->trainingFile) {
+            return null;
+        }
+
+        $path = $this->trainingFile->store('training-files', 'public');
+        $this->trainingFile = null;
+
+        return asset('storage/' . $path);
     }
 
     // Save custom prompt instructions

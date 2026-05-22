@@ -868,6 +868,7 @@
             activeSubTab: 'manual',
             manualContent: @entangle('manualContent'),
             faqContent: @entangle('faqContent'),
+            uploadingFile: false,
             
             init() {
                 if (typeof Quill === 'undefined') {
@@ -933,38 +934,47 @@
                     $wire.saveTrainingContent(this.manualContent, this.faqContent);
                 }
             },
+            triggerFileUpload() {
+                this.$refs.trainingFileInput.click();
+            },
+            async handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                this.uploadingFile = true;
+                
+                $wire.upload('trainingFile', file, 
+                    async (uploadedFilename) => {
+                        try {
+                            const url = await $wire.storeTrainingFile();
+                            if (url) {
+                                const isImage = file.type.startsWith('image/');
+                                let range = this.quill ? this.quill.getSelection(true) : null;
+                                let index = range ? range.index : (this.quill ? this.quill.getLength() : 0);
+                                if (isImage && this.quill) {
+                                    this.quill.insertEmbed(index, 'image', url);
+                                } else if (this.quill) {
+                                    const ext = file.name.split('.').pop().toUpperCase();
+                                    const icons = { PDF: '📄', DOC: '📝', DOCX: '📝', XLS: '📊', XLSX: '📊', ZIP: '📦', MP4: '🎬', default: '📎' };
+                                    const icon = icons[ext] || icons.default;
+                                    const kb = (file.size/1024).toFixed(0);
+                                    const html = '<p><a href=\'' + url + '\' target=\'_blank\' rel=\'noopener\' style=\'display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;text-decoration:none;color:#0f172a;font-weight:700;font-size:14px;transition:all 0.2s;\'>' + icon + ' ' + file.name + ' <span style=\'font-size:11px;color:#94a3b8;font-weight:400;\'>' + ext + ' · ' + kb + ' KB</span></a></p>';
+                                    this.quill.clipboard.dangerouslyPasteHTML(index, html);
+                                }
+                            }
+                        } catch(e) {
+                            console.error(e);
+                        } finally {
+                            this.uploadingFile = false;
+                        }
+                    },
+                    () => {
+                        this.uploadingFile = false;
+                    },
+                    (event) => {}
+                );
+            },
             renderPreview(html) {
-                if (!html || !html.trim()) return `<div class='text-slate-400 text-center mt-10 italic'>Sin contenido...</div>`;
-                let div = document.createElement('div');
-                div.innerHTML = html;
-                
-                let elements = Array.from(div.children);
-                let out = '';
-                let inAccordion = false;
-                let accordionHtml = '';
-                
-                elements.forEach(el => {
-                    if (el.tagName === 'H3' && el.innerText.includes('❓')) {
-                        if (inAccordion) {
-                            out += `<div class='mt-4 pt-4 border-t border-slate-100 text-slate-600 text-sm leading-relaxed'>` + accordionHtml + `</div></details>`;
-                        }
-                        inAccordion = true;
-                        accordionHtml = '';
-                        out += `<details class='bg-white border border-slate-200 rounded-xl my-4 p-4 shadow-sm cursor-pointer group'><summary class='font-black text-base text-slate-800 list-none flex items-center gap-2 outline-none'><span class='text-fuchsia-600 text-lg group-open:rotate-90 transition-transform'>▶</span> ` + el.innerHTML.replace('❓', '') + `</summary>`;
-                    } else {
-                        if (inAccordion) {
-                            accordionHtml += el.outerHTML;
-                        } else {
-                            out += el.outerHTML;
-                        }
-                    }
-                });
-                
-                if (inAccordion) {
-                    out += `<div class='mt-4 pt-4 border-t border-slate-100 text-slate-600 text-sm leading-relaxed'>` + accordionHtml + `</div></details>`;
-                }
-                
-                return out;
+                return window.renderPdfPreview(html, '<div class=\'text-slate-400 text-center mt-10 italic\'>Sin contenido...</div>');
             },
             insertComponent(type) {
                 if (!this.quill) return;
@@ -1090,6 +1100,36 @@
                         </div>
                         <div style="display: flex; align-items: center; gap: 16px;">
                             
+                            <!-- Attach File Button -->
+                            <button
+                                type="button"
+                                @click="triggerFileUpload()"
+                                style="padding: 10px 20px; background-color: white; border: 1px solid #a5b4fc; color: #4f46e5; font-size: 13px; font-weight: 700; border-radius: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s; white-space: nowrap; flex-shrink: 0;"
+                                onmouseover="this.style.backgroundColor='#eef2ff'; this.style.borderColor='#818cf8';"
+                                onmouseout="this.style.backgroundColor='white'; this.style.borderColor='#a5b4fc';"
+                                :disabled="uploadingFile"
+                            >
+                                <template x-if="!uploadingFile">
+                                    <svg style="height: 16px; width: 16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                    </svg>
+                                </template>
+                                <template x-if="uploadingFile">
+                                    <svg style="height: 16px; width: 16px; animation: spin 1s linear infinite;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                </template>
+                                <span x-text="uploadingFile ? 'Subiendo...' : 'Adjuntar Archivo'"></span>
+                            </button>
+                            <!-- Hidden file input -->
+                            <input
+                                type="file"
+                                x-ref="trainingFileInput"
+                                @change="handleFileUpload($event)"
+                                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.mp4,.txt"
+                                class="hidden"
+                            />
+
                             <!-- Dropdown Añadir Bloque -->
                             <div style="position: relative;" @click.away="showTools = false">
                                 <button 
@@ -1214,4 +1254,220 @@
             </div>
         </div>
     @endif
+
+    <script>
+        window.togglePdfViewer = window.togglePdfViewer || function(viewerId, btnId) {
+            const v = document.getElementById(viewerId);
+            const b = document.getElementById(btnId);
+            if (!v) return;
+            const eyeOpenSvg = '<svg style="height:14px;width:14px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg><span>Visualizar</span>';
+            const eyeClosedSvg = '<svg style="height:14px;width:14px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L6.59 6.59m7.532 7.532l3.29 3.29M3 3l18 18"/></svg><span>Ocultar</span>';
+
+            if (v.style.display === 'none' || !v.style.display) {
+                v.style.display = 'block';
+                if (b) b.innerHTML = eyeClosedSvg;
+            } else {
+                v.style.display = 'none';
+                if (b) b.innerHTML = eyeOpenSvg;
+            }
+        };
+
+        window.closePdfViewer = window.closePdfViewer || function(el) {
+            const viewer = el.closest('[id^=pdf-viewer-]');
+            if (!viewer) return;
+            viewer.style.display = 'none';
+            const btnId = 'pdf-btn-' + viewer.id;
+            const b = document.getElementById(btnId);
+            if (b) {
+                b.innerHTML = '<svg style="height:14px;width:14px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg><span>Visualizar</span>';
+            }
+        };
+
+        window.renderPdfPreview = window.renderPdfPreview || function(html, fallbackHtml = '') {
+            if (!html || !html.trim()) return fallbackHtml;
+            let div = document.createElement('div');
+            div.innerHTML = html;
+            
+            let pdfGroups = {};
+            let links = div.querySelectorAll('a');
+            links.forEach(link => {
+                let href = link.getAttribute('href') || '';
+                let isPdf = href.toLowerCase().endsWith('.pdf') || 
+                            href.toLowerCase().includes('.pdf?') || 
+                            href.toLowerCase().includes('/training-files/') || 
+                            link.innerText.toLowerCase().includes('.pdf');
+                if (isPdf) {
+                    if (!pdfGroups[href]) {
+                        pdfGroups[href] = [];
+                    }
+                    pdfGroups[href].push(link);
+                }
+            });
+            
+            Object.keys(pdfGroups).forEach((href, idx) => {
+                let group = pdfGroups[href];
+                let displayName = '';
+                let sizeInfo = '';
+                
+                group.forEach(link => {
+                    let text = link.innerText.trim();
+                    let sizeMatch = text.match(/(\d+(?:\.\d+)?\s*(?:KB|MB|GB|kb|mb|gb))/i);
+                    if (sizeMatch) {
+                        sizeInfo = sizeMatch[1].toUpperCase();
+                    }
+                    
+                    let isMetadata = text.toLowerCase() === 'pdf' || 
+                                     text.includes('·') || 
+                                     /^\s*(?:pdf\s*)?\(?\d+(?:\.\d+)?\s*(?:kb|mb|gb)\)?\s*$/i.test(text);
+                    
+                    if (!isMetadata) {
+                        let cleaned = text.replace('📄', '').trim();
+                        if (cleaned) displayName = cleaned;
+                    }
+                });
+                
+                if (!displayName) {
+                    try {
+                        let urlParts = href.split('/');
+                        displayName = decodeURIComponent(urlParts[urlParts.length - 1]).split('?')[0];
+                    } catch(e) {
+                        displayName = 'Documento PDF';
+                    }
+                }
+                
+                let viewerId = 'pdf-viewer-' + idx + '-' + Math.floor(Math.random() * 100000);
+                let btnId = 'pdf-btn-' + viewerId;
+                
+                let pdfWidget = `<div class="not-prose my-6 rounded-2xl border border-slate-200/80 overflow-hidden shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_-6px_rgba(0,0,0,0.1)] transition-all duration-300 bg-white group/card">
+                    <div class="px-5 py-4 bg-gradient-to-r from-white via-white to-slate-50/30 flex flex-wrap items-center justify-between gap-4">
+                        <div class="flex items-center gap-3.5 min-w-0 flex-1">
+                            <div class="h-12 w-12 flex-shrink-0 rounded-xl flex items-center justify-center shadow-md shadow-red-500/20 group-hover/card:scale-105 transition-all duration-300 bg-gradient-to-br from-red-500 via-rose-500 to-red-700 text-white" style="background: linear-gradient(135deg, #ef4444 0%, #f43f5e 50%, #be123c 100%);">
+                                <svg class="text-white h-6 w-6" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 9h1.5m-1.5 3H12m-3 3h4" />
+                                </svg>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="text-[14px] font-bold text-slate-800 leading-snug truncate" title="${displayName}">${displayName}</div>
+                                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                                    <span class="inline-flex items-center px-1.5 py-0.5 bg-red-50 border border-red-100 rounded text-[9px] font-black text-red-600 uppercase tracking-wider leading-none">PDF</span>
+                                    ${sizeInfo ? `<span class="text-slate-300 text-[10px] leading-none">•</span><span class="text-[11px] text-slate-500 font-medium leading-none">${sizeInfo}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2.5 flex-shrink-0">
+                            <a href="${href}" target="_blank" rel="noopener" class="px-4 py-2 bg-slate-100 hover:bg-slate-800 text-slate-600 hover:text-white text-[11px] font-bold rounded-xl transition-all duration-200 flex items-center gap-2 no-underline shadow-sm border border-slate-200/40">
+                                <svg class="h-3.5 w-3.5" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                                <span>Abrir</span>
+                            </a>
+                            <button id="${btnId}" type="button" onclick="window.togglePdfViewer('${viewerId}', '${btnId}')" class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white text-[11px] font-bold rounded-xl transition-all duration-200 flex items-center gap-2 shadow-sm shadow-cyan-500/20 hover:shadow-md hover:shadow-cyan-500/30">
+                                <svg class="h-3.5 w-3.5" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                <span>Visualizar</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="${viewerId}" style="display: none;" class="border-t border-slate-150">
+                        <div class="px-5 py-3 bg-gradient-to-r from-slate-800 via-slate-800 to-slate-900 flex items-center justify-between">
+                            <div class="flex items-center gap-2.5">
+                                <div class="h-6 w-6 rounded-md bg-white/10 flex items-center justify-center">
+                                    <svg class="text-cyan-400 h-3.5 w-3.5" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                                <span class="text-[10px] font-black text-slate-300 tracking-wider uppercase">Vista Previa del Documento</span>
+                            </div>
+                            <button type="button" onclick="window.closePdfViewer(this)" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white text-[10px] font-bold uppercase tracking-wider transition-all">
+                                <svg class="h-3 w-3" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                <span>Cerrar</span>
+                            </button>
+                        </div>
+                        <div class="bg-slate-100 p-2">
+                            <iframe src="${href}#view=FitH&toolbar=1" class="w-full border-none rounded-lg bg-white shadow-inner" style="height: 600px;"></iframe>
+                        </div>
+                        <div class="px-5 py-2.5 bg-slate-50 border-t border-slate-150 flex items-center justify-between">
+                            <span class="text-[10px] text-slate-400 font-mono tracking-wide">Visor PDF Interactivo</span>
+                            <a href="${href}" download class="text-[10px] text-cyan-600 hover:text-cyan-700 font-bold flex items-center gap-1 no-underline hover:underline transition-all">
+                                <svg class="h-3 w-3" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                <span>Descargar Archivo</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>`;
+                
+                let firstLink = group[0];
+                let parentP = firstLink.closest('p');
+                let tempDiv = document.createElement('div');
+                tempDiv.innerHTML = pdfWidget;
+                let widgetNode = tempDiv.firstElementChild;
+                
+                if (parentP && parentP.parentNode) {
+                    let clone = parentP.cloneNode(true);
+                    let linkInClone = clone.querySelector('a');
+                    if (linkInClone) linkInClone.remove();
+                    let textLeft = clone.innerText.trim();
+                    if (textLeft === '' || textLeft === '📄') {
+                        parentP.parentNode.replaceChild(widgetNode, parentP);
+                    } else {
+                        firstLink.parentNode.replaceChild(widgetNode, firstLink);
+                    }
+                } else {
+                    firstLink.parentNode.replaceChild(widgetNode, firstLink);
+                }
+                
+                for (let i = 1; i < group.length; i++) {
+                    let extraLink = group[i];
+                    let extraP = extraLink.closest('p');
+                    if (extraP && extraP.parentNode) {
+                        let clone = extraP.cloneNode(true);
+                        let linkInClone = clone.querySelector('a');
+                        if (linkInClone) linkInClone.remove();
+                        if (clone.innerText.trim() === '') {
+                            extraP.remove();
+                        } else {
+                            extraLink.remove();
+                        }
+                    } else {
+                        extraLink.remove();
+                    }
+                }
+            });
+            
+            let elements = Array.from(div.children);
+            let out = '';
+            let inAccordion = false;
+            let accordionHtml = '';
+            
+            elements.forEach(el => {
+                if (el.tagName === 'H3' && el.innerText.includes('❓')) {
+                    if (inAccordion) {
+                        out += `<div class="mt-4 pt-4 border-t border-slate-100 text-slate-650 text-sm leading-relaxed">` + accordionHtml + `</div></details>`;
+                    }
+                    inAccordion = true;
+                    accordionHtml = '';
+                    out += `<details class="bg-white border border-slate-200 rounded-xl my-4 p-4 shadow-sm cursor-pointer group"><summary class="font-black text-base text-slate-800 list-none flex items-center gap-2 outline-none"><span class="text-fuchsia-600 text-lg group-open:rotate-90 transition-transform">▶</span> ` + el.innerHTML.replace('❓', '') + `</summary>`;
+                } else {
+                    if (inAccordion) {
+                        accordionHtml += el.outerHTML;
+                    } else {
+                        out += el.outerHTML;
+                    }
+                }
+            });
+            
+            if (inAccordion) {
+                out += `<div class="mt-4 pt-4 border-t border-slate-100 text-slate-650 text-sm leading-relaxed">` + accordionHtml + `</div></details>`;
+            }
+            
+            return out;
+        };
+    </script>
 </div>
