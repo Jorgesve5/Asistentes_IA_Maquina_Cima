@@ -6,6 +6,7 @@ use App\Models\Machine;
 use App\Models\Alert;
 use App\Models\SupervisorMessage;
 use App\Models\Manual;
+use App\Models\SystemSetting;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Auth;
@@ -51,6 +52,10 @@ class AdminDashboard extends Component
     public $faqContent = '';
     public $trainingFile;
 
+    // API Config states
+    public $apiProvider = 'groq';  // groq | gemini | openai
+    public $apiKey = '';
+
     public function mount()
     {
         if (!Auth::check()) {
@@ -73,6 +78,21 @@ class AdminDashboard extends Component
             $this->selectedMachineForTraining = $firstMachine->id;
             $this->manualContent = $firstMachine->manual_content ?? '';
             $this->faqContent = $firstMachine->faq_content ?? '';
+        }
+
+        // Initialize API config state from current env
+        $groqKey = config('services.groq.key');
+        $geminiKey = config('services.gemini.key');
+        $openaiKey = config('services.openai.key');
+        if ($groqKey) {
+            $this->apiProvider = 'groq';
+            $this->apiKey = $groqKey;
+        } elseif ($geminiKey) {
+            $this->apiProvider = 'gemini';
+            $this->apiKey = $geminiKey;
+        } elseif ($openaiKey) {
+            $this->apiProvider = 'openai';
+            $this->apiKey = $openaiKey;
         }
 
         // Initialize selected machine for messages
@@ -929,6 +949,95 @@ class AdminDashboard extends Component
             return "Recibido. Iniciando protocolo de mantenimiento preventivo en la unidad {$machine->name}. Espera indicaciones antes de reanudar operaciones.";
         }
         return "Mensaje recibido. Estamos analizando el estado de la unidad {$machine->name}. Te mantendré informado por este canal de cualquier acción requerida.";
+    }
+
+    /**
+     * Save API configuration to .env file.
+     * Clears all three provider keys then writes only the chosen one.
+     */
+    public function saveApiConfig()
+    {
+        $this->validate([
+            'apiProvider' => 'required|in:groq,gemini,openai',
+            'apiKey'      => 'required|string|min:8|max:512',
+        ]);
+
+        $key = trim($this->apiKey);
+
+        // 1. Save to Database (system_settings)
+        $dbProviderMap = [
+            'groq'   => 'groq_api_key',
+            'gemini' => 'gemini_api_key',
+            'openai' => 'openai_api_key',
+        ];
+
+        SystemSetting::set('active_api_provider', $this->apiProvider);
+        foreach ($dbProviderMap as $p => $settingKey) {
+            if ($p === $this->apiProvider) {
+                SystemSetting::set($settingKey, $key);
+            } else {
+                SystemSetting::set($settingKey, null);
+            }
+        }
+
+        // 2. Try to save to .env (Best Effort fallback)
+        $envSaved = false;
+        try {
+            $envPath = base_path('.env');
+            if (file_exists($envPath) && is_writable($envPath)) {
+                $envContent = file_get_contents($envPath);
+
+                // Map provider -> env variable name
+                $providerMap = [
+                    'groq'   => 'GROQ_API_KEY',
+                    'gemini' => 'GEMINI_API_KEY',
+                    'openai' => 'OPENAI_API_KEY',
+                ];
+
+                // All three keys to manage
+                $allKeys = ['GROQ_API_KEY', 'GEMINI_API_KEY', 'OPENAI_API_KEY'];
+                $targetKey = $providerMap[$this->apiProvider];
+
+                foreach ($allKeys as $envKey) {
+                    $newValue = ($envKey === $targetKey) ? $key : '';
+                    // Replace existing entry
+                    if (preg_match("/^{$envKey}=.*$/m", $envContent)) {
+                        $envContent = preg_replace("/^{$envKey}=.*$/m", "{$envKey}={$newValue}", $envContent);
+                    } else {
+                        // Append if missing
+                        $envContent .= "\n{$envKey}={$newValue}";
+                    }
+                }
+
+                if (file_put_contents($envPath, $envContent) !== false) {
+                    $envSaved = true;
+                }
+            }
+        } catch (\Exception $e) {
+            // Ignore error writing env on production servers
+        }
+
+        // Clear config cache so the new key is picked up immediately
+        try {
+            \Artisan::call('config:clear');
+        } catch (\Exception $e) {
+            // Ignore if artisan calls are restricted
+        }
+
+        $providerNames = [
+            'groq'   => 'Groq (Llama)',
+            'gemini' => 'Google Gemini',
+            'openai' => 'OpenAI (GPT-4o)',
+        ];
+
+        $successMsg = "API configurada con éxito: {$providerNames[$this->apiProvider]}.";
+        if ($envSaved) {
+            $successMsg .= " (Guardado en base de datos y archivo .env)";
+        } else {
+            $successMsg .= " (Guardado en base de datos del servidor de forma segura)";
+        }
+
+        session()->flash('api_config_success', $successMsg);
     }
 
     public function render()

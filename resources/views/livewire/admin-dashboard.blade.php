@@ -59,6 +59,14 @@
         >
             Formación
         </button>
+        <button
+            wire:click="setTab('apiconfig')"
+            onclick="window.playAudio('click');"
+            class="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5 {{ $activeTab === 'apiconfig' ? 'bg-cyan-500 text-slate-950 shadow-[0_4px_12px_rgba(6,182,212,0.15)]' : 'text-slate-500 hover:text-slate-800' }}"
+        >
+            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+            Configurar API
+        </button>
     </div>
 
     <!-- ── TAB: Status (Machine States Cards) ── -->
@@ -1470,4 +1478,235 @@
             return out;
         };
     </script>
+
+    {{-- ── TAB: Configurar API ── --}}
+    @if($activeTab === 'apiconfig')
+    <div
+        style="max-width: 680px; margin: 0 auto; width: 100%;"
+        x-data="{
+            showKey: false,
+            provider: '{{ $apiProvider }}',
+            updateProvider(val) {
+                this.provider = val;
+            }
+        }"
+    >
+
+        {{-- Header card --}}
+        <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 24px; padding: 32px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 20px;">
+
+            {{-- Title --}}
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+                <div style="height: 56px; width: 56px; flex-shrink: 0; border-radius: 16px; background: #f5f3ff; border: 1px solid #ede9fe; display: flex; align-items: center; justify-content: center;">
+                    <svg style="height: 28px; width: 28px; color: #7c3aed;" fill="none" viewBox="0 0 24 24" stroke="#7c3aed" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                    </svg>
+                </div>
+                <div>
+                    <h2 style="font-size: 18px; font-weight: 900; color: #0f172a; letter-spacing: 0.05em; text-transform: uppercase; margin: 0; font-family: 'Outfit', sans-serif;">Configurar API de IA</h2>
+                    <p style="font-size: 12px; color: #64748b; margin: 4px 0 0 0; line-height: 1.5;">Elige el proveedor e introduce tu clave. Los cambios se aplican al instante.</p>
+                </div>
+            </div>
+
+            {{-- Estado actual --}}
+            @php
+                $groqKey   = config('services.groq.key');
+                $geminiKey = config('services.gemini.key');
+                $openaiKey = config('services.openai.key');
+                $activeProvider = null;
+                $activeModel    = null;
+                if ($groqKey)        { $activeProvider = 'Groq (Llama)';     $activeModel = 'llama-3.1-8b-instant'; }
+                elseif ($geminiKey)  { $activeProvider = 'Google Gemini';    $activeModel = 'gemini-2.5-flash'; }
+                elseif ($openaiKey)  { $activeProvider = 'OpenAI (GPT-4o)';  $activeModel = 'gpt-4o-mini'; }
+            @endphp
+            <div style="display: flex; align-items: center; gap: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px 16px; margin-bottom: 24px;">
+                @if($activeProvider)
+                    <span style="position: relative; display: inline-flex; height: 10px; width: 10px; flex-shrink: 0;">
+                        <span class="animate-ping" style="position: absolute; display: inline-flex; height: 100%; width: 100%; border-radius: 50%; background: #34d399; opacity: 0.75;"></span>
+                        <span style="position: relative; display: inline-flex; border-radius: 50%; height: 10px; width: 10px; background: #10b981;"></span>
+                    </span>
+                    <div>
+                        <span style="font-size: 11px; font-weight: 900; color: #065f46; text-transform: uppercase; letter-spacing: 0.08em;">API Activa: {{ $activeProvider }}</span>
+                        <span style="font-size: 10px; color: #94a3b8; font-family: monospace; margin-left: 8px;">Modelo: {{ $activeModel }}</span>
+                    </div>
+                @else
+                    <span style="display: inline-flex; border-radius: 50%; height: 10px; width: 10px; background: #ef4444; flex-shrink: 0;"></span>
+                    <div>
+                        <span style="font-size: 11px; font-weight: 900; color: #dc2626; text-transform: uppercase; letter-spacing: 0.08em;">Sin API Configurada</span>
+                        <span style="font-size: 10px; color: #94a3b8; font-family: monospace; margin-left: 8px;">El asistente IA funciona en modo simulación local</span>
+                    </div>
+                @endif
+            </div>
+
+            {{-- Flash messages --}}
+            @if(session()->has('api_config_success'))
+                <div style="display: flex; align-items: center; gap: 10px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 12px; font-weight: 700; padding: 12px 16px; border-radius: 14px; margin-bottom: 20px;">
+                    <svg style="height: 16px; width: 16px; flex-shrink: 0;" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    {{ session('api_config_success') }}
+                </div>
+            @endif
+            @if(session()->has('api_config_error'))
+                <div style="display: flex; align-items: center; gap: 10px; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; font-size: 12px; font-weight: 700; padding: 12px 16px; border-radius: 14px; margin-bottom: 20px;">
+                    <svg style="height: 16px; width: 16px; flex-shrink: 0;" fill="none" viewBox="0 0 24 24" stroke="#ef4444" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    {{ session('api_config_error') }}
+                </div>
+            @endif
+
+            {{-- FORM --}}
+            <form wire:submit.prevent="saveApiConfig" style="display: flex; flex-direction: column; gap: 20px;">
+
+                {{-- Selector de proveedor --}}
+                <div>
+                    <p style="font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 12px;">Proveedor de IA</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+
+                        {{-- Groq --}}
+                        <label style="cursor: pointer;" onclick="this.querySelector('input').click()">
+                            <input type="radio" wire:model.live="apiProvider" value="groq" style="position: absolute; opacity: 0; width: 0; height: 0;"
+                                @change="updateProvider('groq')">
+                            <div
+                                :style="provider === 'groq'
+                                    ? 'border: 2px solid #7c3aed; background: #f5f3ff; border-radius: 16px; padding: 16px; text-align: center; transition: all 0.2s;'
+                                    : 'border: 2px solid #e2e8f0; background: #fff; border-radius: 16px; padding: 16px; text-align: center; transition: all 0.2s;'"
+                            >
+                                <div style="font-size: 24px; margin-bottom: 6px;">⚡</div>
+                                <div :style="provider === 'groq' ? 'font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #6d28d9;' : 'font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #334155;'">Groq</div>
+                                <div style="font-size: 10px; color: #94a3b8; margin-top: 3px; font-family: monospace;">Llama · Rápido</div>
+                            </div>
+                        </label>
+
+                        {{-- Gemini --}}
+                        <label style="cursor: pointer;" onclick="this.querySelector('input').click()">
+                            <input type="radio" wire:model.live="apiProvider" value="gemini" style="position: absolute; opacity: 0; width: 0; height: 0;"
+                                @change="updateProvider('gemini')">
+                            <div
+                                :style="provider === 'gemini'
+                                    ? 'border: 2px solid #7c3aed; background: #f5f3ff; border-radius: 16px; padding: 16px; text-align: center; transition: all 0.2s;'
+                                    : 'border: 2px solid #e2e8f0; background: #fff; border-radius: 16px; padding: 16px; text-align: center; transition: all 0.2s;'"
+                            >
+                                <div style="font-size: 24px; margin-bottom: 6px;">✨</div>
+                                <div :style="provider === 'gemini' ? 'font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #6d28d9;' : 'font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #334155;'">Gemini</div>
+                                <div style="font-size: 10px; color: #94a3b8; margin-top: 3px; font-family: monospace;">Google · Potente</div>
+                            </div>
+                        </label>
+
+                        {{-- OpenAI --}}
+                        <label style="cursor: pointer;" onclick="this.querySelector('input').click()">
+                            <input type="radio" wire:model.live="apiProvider" value="openai" style="position: absolute; opacity: 0; width: 0; height: 0;"
+                                @change="updateProvider('openai')">
+                            <div
+                                :style="provider === 'openai'
+                                    ? 'border: 2px solid #7c3aed; background: #f5f3ff; border-radius: 16px; padding: 16px; text-align: center; transition: all 0.2s;'
+                                    : 'border: 2px solid #e2e8f0; background: #fff; border-radius: 16px; padding: 16px; text-align: center; transition: all 0.2s;'"
+                            >
+                                <div style="font-size: 24px; margin-bottom: 6px;">🤖</div>
+                                <div :style="provider === 'openai' ? 'font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #6d28d9;' : 'font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #334155;'">OpenAI</div>
+                                <div style="font-size: 10px; color: #94a3b8; margin-top: 3px; font-family: monospace;">GPT-4o · Premium</div>
+                            </div>
+                        </label>
+
+                    </div>
+                </div>
+
+                {{-- Campo clave API --}}
+                <div>
+                    <p style="font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 10px;">Clave de API (API Key)</p>
+                    <div style="position: relative;">
+                        <input
+                            x-show="!showKey"
+                            type="password"
+                            wire:model="apiKey"
+                            placeholder="Pega aquí tu clave de API..."
+                            style="width: 100%; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 14px 48px 14px 16px; font-size: 14px; font-family: monospace; color: #0f172a; outline: none; box-sizing: border-box; transition: border-color 0.2s;"
+                            onfocus="this.style.borderColor='#7c3aed'"
+                            onblur="this.style.borderColor='#e2e8f0'"
+                            autocomplete="off"
+                            spellcheck="false"
+                        >
+                        <input
+                            x-show="showKey"
+                            type="text"
+                            wire:model="apiKey"
+                            placeholder="Pega aquí tu clave de API..."
+                            style="width: 100%; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 14px 48px 14px 16px; font-size: 14px; font-family: monospace; color: #0f172a; outline: none; box-sizing: border-box; transition: border-color 0.2s;"
+                            onfocus="this.style.borderColor='#7c3aed'"
+                            onblur="this.style.borderColor='#e2e8f0'"
+                            autocomplete="off"
+                            spellcheck="false"
+                        >
+                        <button
+                            type="button"
+                            @click="showKey = !showKey"
+                            style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #94a3b8;"
+                        >
+                            <svg x-show="!showKey" style="height: 18px; width: 18px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            <svg x-show="showKey" style="height: 18px; width: 18px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                        </button>
+                    </div>
+                    <p style="font-size: 10px; color: #94a3b8; margin-top: 6px; margin-left: 4px;">
+                        @if($apiProvider === 'groq') Obtén tu clave en <strong style="color: #7c3aed;">console.groq.com/keys</strong>
+                        @elseif($apiProvider === 'gemini') Obtén tu clave en <strong style="color: #7c3aed;">aistudio.google.com/apikey</strong>
+                        @elseif($apiProvider === 'openai') Obtén tu clave en <strong style="color: #7c3aed;">platform.openai.com/api-keys</strong>
+                        @endif
+                    </p>
+                </div>
+
+                {{-- Botón guardar --}}
+                <button
+                    type="submit"
+                    onclick="window.playAudio('success');"
+                    wire:loading.attr="disabled"
+                    style="width: 100%; padding: 16px; background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); color: white; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; border: none; border-radius: 14px; cursor: pointer; box-shadow: 0 8px 24px rgba(124,58,237,0.25); transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;"
+                    onmouseover="this.style.background='linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%)'"
+                    onmouseout="this.style.background='linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)'"
+                >
+                    <svg wire:loading.remove style="height: 16px; width: 16px;" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <svg wire:loading style="height: 16px; width: 16px; animation: spin 1s linear infinite;" fill="none" viewBox="0 0 24 24">
+                        <circle style="opacity: 0.25;" cx="12" cy="12" r="10" stroke="white" stroke-width="4"></circle>
+                        <path style="opacity: 0.75;" fill="white" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span wire:loading.remove>Guardar Configuración</span>
+                    <span wire:loading>Guardando...</span>
+                </button>
+            </form>
+        </div>
+
+        {{-- Guía de proveedores --}}
+        <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 24px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.04);">
+            <h3 style="font-size: 11px; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 16px 0; font-family: 'Outfit', sans-serif;">Guía de Proveedores</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; align-items: flex-start; gap: 12px; background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 14px; padding: 14px;">
+                    <span style="font-size: 20px; flex-shrink: 0;">⚡</span>
+                    <div>
+                        <p style="font-size: 12px; font-weight: 900; color: #1e293b; margin: 0 0 3px 0;">Groq <span style="background: #f5f3ff; color: #7c3aed; font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 20px; margin-left: 4px; letter-spacing: 0.05em; text-transform: uppercase;">RECOMENDADO</span></p>
+                        <p style="font-size: 10px; color: #64748b; margin: 0; line-height: 1.6;">Extremadamente rápido y gratuito. Modelos Llama de Meta. Ideal para producción. → <strong>console.groq.com/keys</strong></p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: flex-start; gap: 12px; background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 14px; padding: 14px;">
+                    <span style="font-size: 20px; flex-shrink: 0;">✨</span>
+                    <div>
+                        <p style="font-size: 12px; font-weight: 900; color: #1e293b; margin: 0 0 3px 0;">Google Gemini</p>
+                        <p style="font-size: 10px; color: #64748b; margin: 0; line-height: 1.6;">Gran capacidad de contexto, soporta imágenes. Clave gratuita → <strong>aistudio.google.com/apikey</strong></p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: flex-start; gap: 12px; background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 14px; padding: 14px;">
+                    <span style="font-size: 20px; flex-shrink: 0;">🤖</span>
+                    <div>
+                        <p style="font-size: 12px; font-weight: 900; color: #1e293b; margin: 0 0 3px 0;">OpenAI (GPT-4o)</p>
+                        <p style="font-size: 10px; color: #64748b; margin: 0; line-height: 1.6;">El modelo más reconocido. Requiere cuenta de pago → <strong>platform.openai.com/api-keys</strong></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    @endif
+
 </div>
