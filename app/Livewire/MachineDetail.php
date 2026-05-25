@@ -248,7 +248,7 @@ class MachineDetail extends Component
                     $botText = $resJson['choices'][0]['message']['content'] ?? 'No he podido procesar tu solicitud.';
                 } else {
                     \Illuminate\Support\Facades\Log::error("Groq API Error: Status " . $response->status() . " - Body: " . $response->body());
-                    $botText = $this->localSimulatorFallback($query, $machine);
+                    $botText = "🚨 **ERROR DE GROQ API**: \nStatus: " . $response->status() . "\n" . $response->body() . "\n\n" . $this->localSimulatorFallback($query, $machine);
                 }
             } elseif ($geminiKey) {
                 // Map history for Gemini
