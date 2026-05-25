@@ -18,7 +18,7 @@
                     <span class="text-sm font-black tracking-[0.12em] transition-colors {{ $isLight ? 'text-slate-800 group-hover:text-cyan-600' : 'text-white group-hover:text-cyan-400' }} uppercase">ARANCALO</span>
                     <div class="flex items-center gap-1.5 mt-0.5">
                         <div class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
-                        <span class="text-[9px] font-mono tracking-widest {{ $isLight ? 'text-slate-500' : 'text-slate-500' }}">Sistema Online</span>
+                        <span class="text-[11px] font-mono tracking-widest {{ $isLight ? 'text-slate-500' : 'text-slate-500' }}">Sistema Online</span>
                     </div>
                 </div>
             </a>

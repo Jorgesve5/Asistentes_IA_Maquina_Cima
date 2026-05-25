@@ -231,7 +231,7 @@ class MachineDetail extends Component
                     }
                 }
 
-                $model = $hasImageInConversation ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.1-8b-instant';
+                $model = $hasImageInConversation ? 'llama-3.2-11b-vision-preview' : 'llama-3.1-8b-instant';
 
                 // Call Groq API (OpenAI-compatible)
                 $response = Http::withoutVerifying()->withHeaders([
@@ -305,7 +305,7 @@ class MachineDetail extends Component
                 // Call Gemini API
                 $response = Http::withoutVerifying()->withHeaders([
                     'Content-Type' => 'application/json',
-                ])->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$geminiKey}", [
+                ])->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$geminiKey}", [
                     'contents' => $geminiContents,
                     'generationConfig' => [
                         'maxOutputTokens' => 1024,

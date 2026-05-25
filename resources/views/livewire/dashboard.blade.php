@@ -4,32 +4,32 @@
     <div class="relative z-20 border-b border-slate-200 bg-white/70 backdrop-blur-md">
         <div class="max-w-[1400px] mx-auto px-6 py-3 flex flex-wrap gap-4 items-center justify-between text-xs">
             <div class="flex items-center gap-2">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estado de Planta:</span>
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Estado de Planta:</span>
             </div>
             <div class="flex flex-wrap items-center gap-3 sm:gap-6">
                 <!-- Disponibles -->
-                <div class="flex items-center gap-2 px-3 py-1 rounded-xl bg-emerald-50 border border-emerald-100">
+                <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-100">
                     <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                    <span class="text-slate-500 text-[11px] font-medium">Disponibles:</span>
-                    <span class="text-slate-800 font-extrabold text-xs">{{ $countOnline }}</span>
+                    <span class="text-slate-500 text-xs font-semibold">Disponibles:</span>
+                    <span class="text-slate-800 font-extrabold text-sm">{{ $countOnline }}</span>
                 </div>
                 <!-- Mantenimiento -->
-                <div class="flex items-center gap-2 px-3 py-1 rounded-xl bg-orange-50 border border-orange-100">
+                <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-orange-50 border border-orange-100">
                     <span class="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse"></span>
-                    <span class="text-slate-500 text-[11px] font-medium">Mantenimiento:</span>
-                    <span class="text-slate-800 font-extrabold text-xs">{{ $countMaintenance }}</span>
+                    <span class="text-slate-500 text-xs font-semibold">Mantenimiento:</span>
+                    <span class="text-slate-800 font-extrabold text-sm">{{ $countMaintenance }}</span>
                 </div>
                 <!-- En Espera -->
-                <div class="flex items-center gap-2 px-3 py-1 rounded-xl bg-amber-50 border border-amber-100">
+                <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-amber-50 border border-amber-100">
                     <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-                    <span class="text-slate-500 text-[11px] font-medium">En Espera:</span>
-                    <span class="text-slate-800 font-extrabold text-xs">{{ $countWaiting }}</span>
+                    <span class="text-slate-500 text-xs font-semibold">En Espera:</span>
+                    <span class="text-slate-800 font-extrabold text-sm">{{ $countWaiting }}</span>
                 </div>
                 <!-- Avería -->
-                <div class="flex items-center gap-2 px-3 py-1 rounded-xl bg-red-50 border border-red-100">
+                <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-red-50 border border-red-100">
                     <span class="h-1.5 w-1.5 rounded-full bg-red-500 animate-bounce"></span>
-                    <span class="text-slate-500 text-[11px] font-medium">Avería:</span>
-                    <span class="text-slate-800 font-extrabold text-xs">{{ $countWarning }}</span>
+                    <span class="text-slate-500 text-xs font-semibold">Avería:</span>
+                    <span class="text-slate-800 font-extrabold text-sm">{{ $countWarning }}</span>
                 </div>
             </div>
         </div>
@@ -41,7 +41,7 @@
             <h1 class="text-6xl sm:text-7xl font-extrabold tracking-tight text-slate-900 uppercase leading-none font-outfit">
                 ZONA <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-600">MÁQUINAS</span>
             </h1>
-            <p class="mt-4 text-[11px] text-slate-400 tracking-[0.3em] uppercase font-bold">
+            <p class="mt-4 text-xs sm:text-sm text-slate-400 tracking-[0.25em] uppercase font-bold">
                 Selecciona una unidad para acceder al asistente técnico
             </p>
         </div>
@@ -110,11 +110,11 @@
                             <div class="border-t border-slate-100 pt-3 mt-1 flex items-center justify-between">
                                 <div class="min-w-0 flex-1">
                                     @if($m->status !== 'online' && $m->subLabel)
-                                        <p class="text-[9px] font-bold text-orange-600 tracking-wider uppercase truncate">
+                                        <p class="text-[11px] font-bold text-orange-600 tracking-wider uppercase truncate">
                                             {{ $m->subLabel }}
                                         </p>
                                     @else
-                                        <p class="text-[9px] text-slate-400 font-mono tracking-wider truncate">
+                                        <p class="text-[11px] text-slate-400 font-mono tracking-wider truncate">
                                             Sin incidencias activas
                                         </p>
                                     @endif
