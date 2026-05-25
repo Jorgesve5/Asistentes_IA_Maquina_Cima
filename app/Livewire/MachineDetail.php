@@ -588,9 +588,10 @@ class MachineDetail extends Component
             'timestamp' => now()->format('H:i')
         ];
         $this->chatMessages[] = $welcomeMsg;
-        // Solo se borran los mensajes visibles en pantalla.
-        // El contexto de la sesión (contextKey) NO se toca,
-        // así la IA sigue recordando toda la conversación anterior.
+        
+        // LIMPIAMOS EL CONTEXTO DE LA SESIÓN PARA EVITAR IMÁGENES ATASCADAS
+        session()->forget($this->contextKey);
+        session([$this->contextKey => $this->chatMessages]);
     }
 
     private function appendToSessionContext(array $message)
