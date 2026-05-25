@@ -312,32 +312,10 @@ class AdminDashboard extends Component
                     $fullPath = $imagePath ? storage_path('app/public/' . $imagePath) : null;
 
                     if ($imagePath && file_exists($fullPath)) {
-                        $hasImageInConversation = true;
-                        $mimeType = mime_content_type($fullPath);
-                        $base64 = base64_encode(file_get_contents($fullPath));
-
-                        $content = [];
-                        if (!empty($msgText)) {
-                            $content[] = [
-                                'type' => 'text',
-                                'text' => $msgText
-                            ];
-                        } else {
-                            $content[] = [
-                                'type' => 'text',
-                                'text' => 'Analiza esta imagen.'
-                            ];
-                        }
-                        $content[] = [
-                            'type' => 'image_url',
-                            'image_url' => [
-                                'url' => "data:{$mimeType};base64,{$base64}"
-                            ]
-                        ];
-
+                        // FORZAR MODO TEXTO: Ignoramos la imagen porque Groq ha desactivado los modelos de visión.
                         $apiMessages[] = [
                             'role' => $msg['sender'] === 'bot' ? 'assistant' : 'user',
-                            'content' => $content
+                            'content' => $msgText ?: '[El usuario ha enviado una imagen, pero el análisis visual está desactivado temporalmente en la IA]'
                         ];
                     } else {
                         $apiMessages[] = [
@@ -347,7 +325,7 @@ class AdminDashboard extends Component
                     }
                 }
 
-                $model = $hasImageInConversation ? 'llama-3.2-90b-vision-preview' : 'llama-3.1-8b-instant';
+                $model = 'llama-3.1-8b-instant'; // Forzamos siempre el modelo de texto
                 // Call Groq API (OpenAI-compatible)
                 $response = Http::withoutVerifying()->withHeaders([
                     'Content-Type' => 'application/json',
