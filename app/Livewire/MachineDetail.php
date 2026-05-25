@@ -231,8 +231,7 @@ class MachineDetail extends Component
                     }
                 }
 
-                $model = $hasImageInConversation ? 'llama-3.2-11b-vision-preview' : 'llama-3.1-8b-instant';
-
+                $model = $hasImageInConversation ? 'llama-3.2-90b-vision-preview' : 'llama-3.1-8b-instant';
                 // Call Groq API (OpenAI-compatible)
                 $response = Http::withoutVerifying()->withHeaders([
                     'Content-Type' => 'application/json',

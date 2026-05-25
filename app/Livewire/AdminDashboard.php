@@ -347,8 +347,7 @@ class AdminDashboard extends Component
                     }
                 }
 
-                $model = $hasImageInConversation ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.1-8b-instant';
-
+                $model = $hasImageInConversation ? 'llama-3.2-90b-vision-preview' : 'llama-3.1-8b-instant';
                 // Call Groq API (OpenAI-compatible)
                 $response = Http::withoutVerifying()->withHeaders([
                     'Content-Type' => 'application/json',
