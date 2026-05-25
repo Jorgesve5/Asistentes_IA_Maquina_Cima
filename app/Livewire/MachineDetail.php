@@ -395,6 +395,9 @@ class MachineDetail extends Component
                     $pos = mb_strpos(mb_strtolower($manual->text), $word);
                     $start = max(0, $pos - 100);
                     $snippet = mb_substr($manual->text, $start, 300);
+                    // Clean up strange characters like dotted lines from the PDF
+                    $snippet = preg_replace('/-{3,}/', ' ', $snippet);
+                    $snippet = preg_replace('/\s+/', ' ', $snippet);
                     return "📖 **[Simulador RAG - Coincidencia en {$manual->fileName}]**:\n\n... " . trim($snippet) . " ...";
                 }
             }
