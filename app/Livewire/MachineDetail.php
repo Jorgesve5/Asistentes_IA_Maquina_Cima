@@ -160,11 +160,18 @@ class MachineDetail extends Component
         // Set prompt system context (use custom if defined, otherwise default)
         $systemPrompt = $machine->custom_prompt ?: "Eres el asistente técnico de IA experto para la máquina {$machine->name} (Serial: {$machine->serial}) de Arancalo.\n";
         
+        $chatManuals = $machine->manuals->where('in_chat', true);
+        $manualNames = $chatManuals->pluck('fileName')->implode(', ');
+        
+        if ($manualNames) {
+            $systemPrompt .= "Tienes asignados y cargados en tu memoria los siguientes manuales de esta máquina: {$manualNames}.\n";
+        }
+
         if (!empty($context)) {
-            $systemPrompt .= "\nUsa la siguiente documentación técnica seleccionada de la máquina para responder las preguntas del usuario:\n{$context}\n";
-            $systemPrompt .= "Si la pregunta es técnica, basa tu respuesta principalmente en esta documentación técnica. Si no encuentras la respuesta en ella, indícalo de forma amable pero intenta responder según tu conocimiento técnico general.\n";
+            $systemPrompt .= "\nUsa la siguiente documentación técnica seleccionada (extraída por el buscador semántico) para responder las preguntas del usuario:\n{$context}\n";
+            $systemPrompt .= "Si la pregunta es técnica, basa tu respuesta principalmente en esta documentación técnica. Si el texto extraído no contiene la respuesta exacta a lo que pregunta el usuario, indícalo de forma amable (por ejemplo: 'En el manual XYZ no he encontrado los detalles exactos de...') y luego intenta sugerir una solución según tu conocimiento técnico general.\n";
         } else {
-            $systemPrompt .= "\nActualmente no hay manuales o no se requiere documentación técnica para esta consulta. Puedes responder de forma amigable y útil sobre el funcionamiento teórico general de la máquina o entablar una conversación informal según sea el caso.\n";
+            $systemPrompt .= "\nActualmente el buscador automático no ha extraído ningún fragmento relevante de los manuales para esta consulta específica. Puedes responder de forma amigable y útil sobre el funcionamiento teórico general de la máquina, o pedirle al usuario que use otras palabras clave para que el buscador encuentre el texto en el manual.\n";
         }
 
         $systemPrompt .= "REGLA CRÍTICA: Debes poder responder de forma totalmente normal, natural y amigable a saludos habituales (como 'hola', 'buenos días'), listados generales (por ejemplo: 'dime los números del 1 al 10', 'cuenta hasta 5') y preguntas conversacionales generales (como '¿qué tal estás?'). No digas que falta información técnica para responder saludos o preguntas cotidianas.\n";
