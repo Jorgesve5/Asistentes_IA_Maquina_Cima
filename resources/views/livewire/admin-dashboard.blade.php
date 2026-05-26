@@ -894,8 +894,9 @@
                 }
 
                 $wire.on('trainingContentUpdated', (e) => {
-                    this.manualContent = e[0].manual || '';
-                    this.faqContent = e[0].faq || '';
+                    let data = Array.isArray(e) ? e[0] : (e.detail || e);
+                    this.manualContent = data.manual || '';
+                    this.faqContent = data.faq || '';
                     
                     if (this.quill) {
                         this.quill.root.innerHTML = this.activeSubTab === 'manual' ? this.manualContent : this.faqContent;
@@ -926,6 +927,20 @@
                 
                 this.quill.root.innerHTML = this.manualContent || '';
                 
+                this.quill.root.addEventListener('paste', (e) => {
+                    const clipboardData = e.clipboardData || window.clipboardData;
+                    if (clipboardData && clipboardData.items) {
+                        for (let i = 0; i < clipboardData.items.length; i++) {
+                            if (clipboardData.items[i].type.indexOf('image') !== -1) {
+                                e.preventDefault();
+                                const file = clipboardData.items[i].getAsFile();
+                                if (file) this.processFile(file);
+                                return;
+                            }
+                        }
+                    }
+                });
+                
                 this.quill.on('text-change', () => {
                     if (this.activeSubTab === 'manual') {
                         this.manualContent = this.quill.root.innerHTML;
@@ -955,6 +970,10 @@
             async handleFileUpload(event) {
                 const file = event.target.files[0];
                 if (!file) return;
+                this.processFile(file);
+                event.target.value = '';
+            },
+            async processFile(file) {
                 this.uploadingFile = true;
                 
                 $wire.upload('trainingFile', file, 
@@ -968,11 +987,12 @@
                                 if (isImage && this.quill) {
                                     this.quill.insertEmbed(index, 'image', url);
                                 } else if (this.quill) {
-                                    const ext = file.name.split('.').pop().toUpperCase();
+                                    const ext = file.name ? file.name.split('.').pop().toUpperCase() : 'FILE';
                                     const icons = { PDF: '📄', DOC: '📝', DOCX: '📝', XLS: '📊', XLSX: '📊', ZIP: '📦', MP4: '🎬', default: '📎' };
                                     const icon = icons[ext] || icons.default;
                                     const kb = (file.size/1024).toFixed(0);
-                                    const html = '<p><a href=\'' + url + '\' target=\'_blank\' rel=\'noopener\' style=\'display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;text-decoration:none;color:#0f172a;font-weight:700;font-size:14px;transition:all 0.2s;\'>' + icon + ' ' + file.name + ' <span style=\'font-size:11px;color:#94a3b8;font-weight:400;\'>' + ext + ' · ' + kb + ' KB</span></a></p>';
+                                    const name = file.name || 'Archivo Pegado';
+                                    const html = '<p><a href=\'' + url + '\' target=\'_blank\' rel=\'noopener\' style=\'display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;text-decoration:none;color:#0f172a;font-weight:700;font-size:14px;transition:all 0.2s;\'>' + icon + ' ' + name + ' <span style=\'font-size:11px;color:#94a3b8;font-weight:400;\'>' + ext + ' · ' + kb + ' KB</span></a></p>';
                                     this.quill.clipboard.dangerouslyPasteHTML(index, html);
                                 }
                             }
