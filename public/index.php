@@ -17,12 +17,4 @@ require __DIR__.'/../vendor/autoload.php';
 /** @var Application $app */
 $app = require_once __DIR__.'/../bootstrap/app.php';
 
-try {
-    $kernel = $app->make(\Illuminate\Contracts\Http\Kernel::class);
-    // FORCE DEBUG TRUE TO CATCH LIVEWIRE ERRORS
-    config(['app.debug' => true]);
-    $app->handleRequest(Request::capture());
-} catch (\Throwable $e) {
-    file_put_contents(__DIR__.'/../storage/logs/fatal_error.txt', "Global Exception in index.php: " . $e->getMessage() . "\n" . $e->getTraceAsString());
-    throw $e;
-}
+$app->handleRequest(Request::capture());
