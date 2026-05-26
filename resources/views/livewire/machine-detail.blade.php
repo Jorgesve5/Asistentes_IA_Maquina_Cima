@@ -1088,8 +1088,45 @@
                         let urlParts = href.split('/');
                         displayName = decodeURIComponent(urlParts[urlParts.length - 1]).split('?')[0];
                     } catch(e) {
-                        displayName = 'Documento PDF';
+                        displayName = 'Documento';
                     }
+                }
+                
+                // Determine Extension and Styling
+                let ext = 'FILE';
+                let displayNameLower = displayName.toLowerCase();
+                let hrefLower = href.toLowerCase();
+                
+                if (displayNameLower.includes('.pdf') || hrefLower.includes('.pdf')) ext = 'PDF';
+                else if (displayNameLower.includes('.xls') || hrefLower.includes('.xls')) ext = 'XLSX';
+                else if (displayNameLower.includes('.doc') || hrefLower.includes('.doc')) ext = 'DOCX';
+                else if (displayNameLower.includes('.png') || displayNameLower.includes('.jpg') || displayNameLower.includes('.jpeg')) ext = 'IMG';
+                else {
+                    let parts = displayName.split('.');
+                    if (parts.length > 1) {
+                        let last = parts.pop().toUpperCase();
+                        if (last.length <= 4) ext = last;
+                    }
+                }
+
+                let badgeStyle = '';
+                let iconGradient = '';
+                
+                if (ext.includes('PDF')) {
+                    badgeStyle = 'bg-red-50 border-red-100 text-red-600';
+                    iconGradient = 'from-red-500 via-rose-500 to-red-700 shadow-red-500/20';
+                } else if (ext.includes('XLS')) {
+                    badgeStyle = 'bg-emerald-50 border-emerald-100 text-emerald-600';
+                    iconGradient = 'from-emerald-500 via-teal-500 to-emerald-700 shadow-emerald-500/20';
+                } else if (ext.includes('DOC')) {
+                    badgeStyle = 'bg-blue-50 border-blue-100 text-blue-600';
+                    iconGradient = 'from-blue-500 via-indigo-500 to-blue-700 shadow-blue-500/20';
+                } else if (ext.includes('IMG')) {
+                    badgeStyle = 'bg-purple-50 border-purple-100 text-purple-600';
+                    iconGradient = 'from-purple-500 via-fuchsia-500 to-purple-700 shadow-purple-500/20';
+                } else {
+                    badgeStyle = 'bg-slate-50 border-slate-200 text-slate-600';
+                    iconGradient = 'from-slate-500 via-slate-600 to-slate-700 shadow-slate-500/20';
                 }
                 
                 let viewerId = 'pdf-viewer-' + idx + '-' + Math.floor(Math.random() * 100000);
@@ -1098,7 +1135,7 @@
                 let pdfWidget = `<div class="not-prose my-6 rounded-2xl border border-slate-200/80 overflow-hidden shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_-6px_rgba(0,0,0,0.1)] transition-all duration-300 bg-white group/card">
                     <div class="px-5 py-4 bg-gradient-to-r from-white via-white to-slate-50/30 flex flex-wrap items-center justify-between gap-4">
                         <div class="flex items-center gap-3.5 min-w-0 flex-1">
-                            <div class="h-12 w-12 flex-shrink-0 rounded-xl flex items-center justify-center shadow-md shadow-red-500/20 group-hover/card:scale-105 transition-all duration-300 bg-gradient-to-br from-red-500 via-rose-500 to-red-700 text-white" style="background: linear-gradient(135deg, #ef4444 0%, #f43f5e 50%, #be123c 100%);">
+                            <div class="h-12 w-12 flex-shrink-0 rounded-xl flex items-center justify-center shadow-md group-hover/card:scale-105 transition-all duration-300 bg-gradient-to-br ${iconGradient} text-white">
                                 <svg class="text-white h-6 w-6" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 9h1.5m-1.5 3H12m-3 3h4" />
@@ -1107,7 +1144,7 @@
                             <div class="min-w-0 flex-1">
                                 <div class="text-[14px] font-bold text-slate-800 leading-snug truncate" title="${displayName}">${displayName}</div>
                                 <div class="flex items-center gap-2 mt-1 flex-wrap">
-                                    <span class="inline-flex items-center px-1.5 py-0.5 bg-red-50 border border-red-100 rounded text-[9px] font-black text-red-600 uppercase tracking-wider leading-none">PDF</span>
+                                    <span class="inline-flex items-center px-1.5 py-0.5 border rounded text-[9px] font-black uppercase tracking-wider leading-none ${badgeStyle}">${ext}</span>
                                     ${sizeInfo ? `<span class="text-slate-300 text-[10px] leading-none">•</span><span class="text-[11px] text-slate-500 font-medium leading-none">${sizeInfo}</span>` : ''}
                                 </div>
                             </div>
