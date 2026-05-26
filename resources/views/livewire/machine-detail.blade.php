@@ -422,7 +422,6 @@
                 {{-- Tabs --}}
                 <div class="flex border-b border-slate-200 bg-white">
                     <button @click="activeTab = 'manuals'" :class="activeTab === 'manuals' ? 'border-b-2 border-cyan-500 text-cyan-600' : 'text-slate-500'" class="px-6 py-3 text-xs font-bold uppercase tracking-widest transition-colors">Manuales</button>
-                    <button @click="activeTab = 'errors'" :class="activeTab === 'errors' ? 'border-b-2 border-cyan-500 text-cyan-600' : 'text-slate-500'" class="px-6 py-3 text-xs font-bold uppercase tracking-widest transition-colors">Errores</button>
                 </div>
 
                 {{-- Search & Filter Bar --}}
