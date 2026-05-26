@@ -840,7 +840,7 @@
 
                 {{-- Modal Body --}}
                 <div class="flex-1 overflow-y-auto p-6 sm:p-8 bg-white">
-                    @if(empty(trim(strip_tags($machine->manual_content))))
+                    @if(empty(trim(strip_tags($machine->manual_content, '<img><iframe><video><audio><a>'))))
                         <div class="py-20 text-center">
                             <div class="h-16 w-16 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 mx-auto mb-4 shadow-sm">
                                 <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -900,7 +900,7 @@
 
                 {{-- Modal Body --}}
                 <div class="flex-1 overflow-y-auto p-6 sm:p-8 bg-white">
-                    @if(empty(trim(strip_tags($machine->faq_content))))
+                    @if(empty(trim(strip_tags($machine->faq_content, '<img><iframe><video><audio><a>'))))
                         <div class="py-20 text-center">
                             <div class="h-16 w-16 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 mx-auto mb-4 shadow-sm">
                                 <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
