@@ -201,7 +201,7 @@ class MachineDetail extends Component
                 $hasImageInConversation = false;
                 $contextMessages = session($this->contextKey, []);
                 $historyCount = count($contextMessages);
-                $startIdx = max(0, $historyCount - 9); // Send last 9 messages of history
+                $startIdx = max(0, $historyCount - 3); // Send last 3 messages of history
 
                 for ($i = $startIdx; $i < $historyCount; $i++) {
                     $msg = $contextMessages[$i];
@@ -235,7 +235,7 @@ class MachineDetail extends Component
                     'model' => $model,
                     'messages' => $apiMessages,
                     'temperature' => 0.4,
-                    'max_tokens' => 1024
+                    'max_tokens' => 512
                 ]);
 
                 if ($response->successful()) {
@@ -243,14 +243,18 @@ class MachineDetail extends Component
                     $botText = $resJson['choices'][0]['message']['content'] ?? 'No he podido procesar tu solicitud.';
                 } else {
                     \Illuminate\Support\Facades\Log::error("Groq API Error: Status " . $response->status() . " - Body: " . $response->body());
-                    $botText = $this->localSimulatorFallback($query, $machine);
+                    if ($response->status() === 429) {
+                        $botText = "🤖 **[Aviso de Servidor]**:\nHe recibido demasiadas consultas seguidas (Límite de la API alcanzado). Por favor, espera unos 10 segundos y vuelve a intentarlo.";
+                    } else {
+                        $botText = $this->localSimulatorFallback($query, $machine);
+                    }
                 }
             } elseif ($geminiKey) {
                 // Map history for Gemini
                 $geminiContents = [];
                 $contextMessages = session($this->contextKey, []);
                 $historyCount = count($contextMessages);
-                $startIdx = max(0, $historyCount - 9);
+                $startIdx = max(0, $historyCount - 3);
 
                 for ($i = $startIdx; $i < $historyCount; $i++) {
                     $msg = $contextMessages[$i];

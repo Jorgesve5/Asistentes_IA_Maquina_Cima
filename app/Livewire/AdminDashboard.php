@@ -301,7 +301,7 @@ class AdminDashboard extends Component
 
                 $hasImageInConversation = false;
                 $historyCount = count($this->chatMessages);
-                $startIdx = max(0, $historyCount - 9); // Send last 9 messages of history
+                $startIdx = max(0, $historyCount - 3); // Send last 3 messages of history
 
                 for ($i = $startIdx; $i < $historyCount; $i++) {
                     $msg = $this->chatMessages[$i];
@@ -334,20 +334,25 @@ class AdminDashboard extends Component
                     'model' => $model,
                     'messages' => $apiMessages,
                     'temperature' => 0.4,
-                    'max_tokens' => 1024
+                    'max_tokens' => 512
                 ]);
 
                 if ($response->successful()) {
                     $resJson = $response->json();
                     $botText = $resJson['choices'][0]['message']['content'] ?? 'No he podido procesar tu solicitud.';
                 } else {
-                    $botText = $this->localSimulatorFallback($query, $machine);
+                    \Illuminate\Support\Facades\Log::error("Groq API Error Admin: Status " . $response->status() . " - Body: " . $response->body());
+                    if ($response->status() === 429) {
+                        $botText = "🤖 **[Aviso de Servidor]**:\nLímite de API alcanzado. Por favor, espera unos 10 segundos.";
+                    } else {
+                        $botText = $this->localSimulatorFallback($query, $machine);
+                    }
                 }
             } elseif ($geminiKey) {
                 // Map history for Gemini
                 $geminiContents = [];
                 $historyCount = count($this->chatMessages);
-                $startIdx = max(0, $historyCount - 9);
+                $startIdx = max(0, $historyCount - 3);
 
                 for ($i = $startIdx; $i < $historyCount; $i++) {
                     $msg = $this->chatMessages[$i];
