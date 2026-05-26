@@ -6,6 +6,7 @@ use App\Models\Machine;
 use App\Models\Alert;
 use App\Models\Manual;
 use App\Models\SupervisorMessage;
+use App\Models\MachineError;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Http;
@@ -28,6 +29,14 @@ class MachineDetail extends Component
     public $showErrorsModal = false;
     public $showTrainingModal = false;
     public $showFaqModal = false;
+
+    // Save conversation state
+    public $showSaveModal = false;
+    public $saveTitle = '';
+    public $saveDescription = '';
+    public $showViewConversationModal = false;
+    public $viewingConversationMessages = [];
+    public $viewingConversationTitle = '';
 
     // Viewer modal state
     public $viewingManualId = null;
@@ -234,7 +243,7 @@ class MachineDetail extends Component
                     $botText = $resJson['choices'][0]['message']['content'] ?? 'No he podido procesar tu solicitud.';
                 } else {
                     \Illuminate\Support\Facades\Log::error("Groq API Error: Status " . $response->status() . " - Body: " . $response->body());
-                    $botText = "🚨 **ERROR DE GROQ API**: \nStatus: " . $response->status() . "\n" . $response->body() . "\n\n" . $this->localSimulatorFallback($query, $machine);
+                    $botText = $this->localSimulatorFallback($query, $machine);
                 }
             } elseif ($geminiKey) {
                 // Map history for Gemini
@@ -323,31 +332,6 @@ class MachineDetail extends Component
         $this->chatMessages[] = $botMsg;
 
         $this->appendToSessionContext($botMsg);
-
-        // Save error if it has an image or matches error keywords
-        $containsErrorKeyword = false;
-        if (!empty($query)) {
-            $keywords = ['error', 'fallo', 'avería', 'averia', 'problema', 'defecto', 'roto', 'no funciona', 'alarma', 'defectuoso', 'daño', 'dañado', 'anomaly', 'anomalía', 'anomalia', 'incidencia'];
-            foreach ($keywords as $kw) {
-                if (mb_strpos(mb_strtolower($query), $kw) !== false) {
-                    $containsErrorKeyword = true;
-                    break;
-                }
-            }
-        }
-
-        if ($imagePath !== null || $containsErrorKeyword) {
-            try {
-                \App\Models\MachineError::create([
-                    'machine_id' => $this->machineId,
-                    'user_message' => $query ?: ($imagePath ? 'Imagen de fallo enviada' : 'Fallo reportado'),
-                    'image_path' => $imagePath,
-                    'ai_response' => $botText,
-                ]);
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error("Error saving MachineError: " . $e->getMessage());
-            }
-        }
 
         $this->isThinking = false;
     }
@@ -563,6 +547,71 @@ class MachineDetail extends Component
         }
     }
 
+    public function openSaveModal()
+    {
+        $this->saveTitle = '';
+        $this->saveDescription = '';
+        $this->showSaveModal = true;
+    }
+    
+    public function closeSaveModal()
+    {
+        $this->showSaveModal = false;
+    }
+    
+    public function saveConversation()
+    {
+        $this->validate([
+            'saveTitle' => 'required|string|max:255',
+            'saveDescription' => 'nullable|string|max:1000'
+        ]);
+        
+        MachineError::create([
+            'machine_id' => $this->machineId,
+            'title' => $this->saveTitle,
+            'description' => $this->saveDescription,
+            'messages' => $this->chatMessages,
+            'is_saved' => true,
+        ]);
+        
+        $this->showSaveModal = false;
+        session()->flash('save_success', 'Conversación guardada con éxito.');
+    }
+    
+    public function loadConversation($id)
+    {
+        $conversation = MachineError::where('machine_id', $this->machineId)
+            ->where('is_saved', true)
+            ->find($id);
+        if ($conversation) {
+            $this->chatMessages = $conversation->messages;
+            session([$this->contextKey => $this->chatMessages]);
+            $this->showErrorsModal = false; // Close the modal after loading
+            $this->showViewConversationModal = false; // Close view modal if open
+        }
+    }
+
+    public function viewConversation($id)
+    {
+        $conversation = MachineError::where('machine_id', $this->machineId)
+            ->where('is_saved', true)
+            ->find($id);
+        if ($conversation) {
+            $this->viewingConversationMessages = $conversation->messages ?? [];
+            $this->viewingConversationTitle = $conversation->title;
+            $this->showViewConversationModal = true;
+            $this->showErrorsModal = false; // Close the list so it doesn't stay behind
+        }
+    }
+
+    public function closeViewConversationModal()
+    {
+        $this->showViewConversationModal = false;
+        $this->viewingConversationMessages = [];
+        $this->viewingConversationTitle = '';
+        $this->showErrorsModal = true; // Reopen the list automatically when closing the viewer
+    }
+
     public function clearChatHistory()
     {
         $machine = Machine::find($this->machineId);
@@ -667,7 +716,7 @@ class MachineDetail extends Component
 
         // Only query errors when the errors modal is open
         $machineErrors = $this->showErrorsModal
-            ? \App\Models\MachineError::where('machine_id', $this->machineId)->latest()->get()
+            ? \App\Models\MachineError::where('machine_id', $this->machineId)->where('is_saved', true)->latest()->get()
             : collect();
 
         return view('livewire.machine-detail', [

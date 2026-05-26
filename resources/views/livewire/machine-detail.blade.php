@@ -173,7 +173,20 @@
                     </div>
                     <span class="text-[15px] font-black text-white tracking-widest uppercase font-outfit drop-shadow-sm truncate">Asistente IA</span>
                 </div>
+                
                 <div class="flex items-center gap-3">
+                    <button
+                        type="button"
+                        wire:click="openSaveModal"
+                        onclick="window.playAudio('click');"
+                        title="Guardar esta conversación manualmente"
+                        class="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white rounded-full text-[10px] font-bold uppercase tracking-widest transition-all duration-300 shadow-[0_4px_10px_rgba(16,185,129,0.3)] hover:shadow-[0_6px_15px_rgba(16,185,129,0.4)] hover:-translate-y-0.5 border border-emerald-400/50"
+                    >
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                        </svg>
+                        <span class="hidden sm:inline">Guardar Conversación</span>
+                    </button>
                     <button
                         wire:click="clearChatHistory"
                         onclick="window.playAudio('click');"
@@ -382,13 +395,14 @@
         <div
             class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-[90]"
             wire:click.self="closeDocExplorer"
+            x-data="{ activeTab: 'manuals' }"
         >
             <div class="w-full max-w-3xl max-h-[80vh] bg-white border border-slate-200 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
 
                 {{-- Modal Header --}}
                 <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50 flex-shrink-0">
                     <div class="flex items-center gap-3">
-                        <div class="h-8 w-8 bg-cyan-55 bg-cyan-50 border border-cyan-100 rounded-lg flex items-center justify-center text-cyan-600 shadow-sm">
+                        <div class="h-8 w-8 bg-cyan-50 border border-cyan-100 rounded-lg flex items-center justify-center text-cyan-600 shadow-sm">
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                             </svg>
@@ -405,8 +419,14 @@
                     </button>
                 </div>
 
+                {{-- Tabs --}}
+                <div class="flex border-b border-slate-200 bg-white">
+                    <button @click="activeTab = 'manuals'" :class="activeTab === 'manuals' ? 'border-b-2 border-cyan-500 text-cyan-600' : 'text-slate-500'" class="px-6 py-3 text-xs font-bold uppercase tracking-widest transition-colors">Manuales</button>
+                    <button @click="activeTab = 'errors'" :class="activeTab === 'errors' ? 'border-b-2 border-cyan-500 text-cyan-600' : 'text-slate-500'" class="px-6 py-3 text-xs font-bold uppercase tracking-widest transition-colors">Errores</button>
+                </div>
+
                 {{-- Search & Filter Bar --}}
-                <div class="px-6 py-4 border-b border-slate-200 flex-shrink-0 flex flex-col sm:flex-row gap-3 bg-white">
+                <div class="px-6 py-4 border-b border-slate-200 flex-shrink-0 flex flex-col sm:flex-row gap-3 bg-white" x-show="activeTab === 'manuals'">
                     <div class="relative flex-1">
                         <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                             <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -612,21 +632,24 @@
     {{-- ── Visor de Errores Modal ── --}}
     @if($showErrorsModal)
         <div
-            class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-[90]"
+            class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-[100]"
+            style="z-index: 9999;"
             wire:click.self="closeErrorsModal"
         >
-            <div class="w-full max-w-4xl max-h-[85vh] bg-white border border-slate-200 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+            <div 
+                class="w-full max-w-5xl max-h-[85vh] bg-white border border-slate-200 rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+            >
                 {{-- Modal Header --}}
                 <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50 flex-shrink-0">
                     <div class="flex items-center gap-3">
-                        <div class="h-8 w-8 bg-rose-50 border border-rose-200 rounded-lg flex items-center justify-center text-rose-600 shadow-sm">
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        <div class="h-8 w-8 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-center text-emerald-600 shadow-sm">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-sm font-black text-slate-800 uppercase tracking-wider">Historial de Incidencias y Errores (IA)</h3>
-                            <p class="text-[10px] text-slate-505 text-slate-500 font-bold uppercase tracking-wider mt-0.5">{{ $machine->name }}</p>
+                            <h3 class="text-sm font-black text-slate-800 uppercase tracking-wider">Conversaciones Guardadas</h3>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">{{ $machine->name }}</p>
                         </div>
                     </div>
                     <button wire:click="closeErrorsModal" class="text-slate-400 hover:text-slate-700 transition-colors">
@@ -637,72 +660,147 @@
                 </div>
 
                 {{-- Modal Body --}}
-                <div class="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/20">
+                <div class="flex-1 overflow-y-auto p-6 bg-slate-50/50">
                     @if($machineErrors->isEmpty())
+                            <div class="py-20 text-center">
+                                <div class="h-16 w-16 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 mx-auto mb-4 shadow-sm">
+                                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                    </svg>
+                                </div>
+                                <h4 class="text-xs font-mono text-slate-400 uppercase tracking-widest">No hay conversaciones</h4>
+                                <p class="text-[10px] text-slate-500 mt-1 max-w-sm mx-auto">Usa el botón "Guardar Conversación" en el chat para registrar un hilo completo manualmente.</p>
+                            </div>
+                        @else
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                @foreach($machineErrors as $conv)
+                                    <div class="bg-white border border-slate-200 hover:border-emerald-300/50 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all group relative flex flex-col">
+                                        {{-- Delete Button --}}
+                                        <button
+                                            wire:click="deleteMachineError('{{ $conv->id }}')"
+                                            onclick="window.playAudio('click');"
+                                            title="Eliminar conversación"
+                                            class="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                        >
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                        
+                                        <div class="flex justify-between items-start mb-3 pr-6">
+                                            <h4 class="text-sm font-black text-slate-800 line-clamp-2">{{ $conv->title }}</h4>
+                                        </div>
+                                        <span class="text-[10px] font-mono text-slate-400 mb-2 inline-flex items-center gap-1.5 bg-slate-50 border border-slate-100 rounded-md px-2 py-0.5 w-max">
+                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            {{ $conv->created_at->format('d/m/Y H:i') }}
+                                        </span>
+                                        
+                                        @if($conv->description)
+                                            <p class="text-xs text-slate-600 line-clamp-3 mb-4 leading-relaxed flex-1">{{ $conv->description }}</p>
+                                        @else
+                                            <p class="text-xs text-slate-400 italic mb-4 flex-1">Sin descripción</p>
+                                        @endif
+                                        
+                                        <div class="mt-auto pt-4 border-t border-slate-100 flex gap-2">
+                                            <button
+                                                wire:click="viewConversation('{{ $conv->id }}')"
+                                                onclick="window.playAudio('click');"
+                                                class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-black uppercase tracking-wider transition-colors border border-slate-200"
+                                            >
+                                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                                Visualizar
+                                            </button>
+                                            <button
+                                                wire:click="loadConversation('{{ $conv->id }}')"
+                                                onclick="if(confirm('Esto reemplazará tu chat actual. ¿Continuar?')) { window.playAudio('success'); } else { return false; }"
+                                                class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-black uppercase tracking-wider transition-colors border border-emerald-200/50"
+                                            >
+                                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                                                </svg>
+                                                Restaurar
+                                            </button>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- ── Visualizar Conversación Modal ── --}}
+    @if($showViewConversationModal)
+        <div
+            class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-[120]"
+            style="z-index: 9999;"
+            wire:click.self="closeViewConversationModal"
+        >
+            <div class="w-full max-w-4xl h-[85vh] bg-white border border-slate-200 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+                {{-- Modal Header --}}
+                <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50 flex-shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="h-8 w-8 bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center text-slate-600 shadow-sm">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-black text-slate-800 uppercase tracking-wider line-clamp-1">{{ $viewingConversationTitle ?: 'Conversación Guardada' }}</h3>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Modo de sólo lectura</p>
+                        </div>
+                    </div>
+                    <button wire:click="closeViewConversationModal" class="flex items-center gap-2 px-3 py-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors font-bold text-xs tracking-wider uppercase">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Volver
+                    </button>
+                </div>
+
+                {{-- Modal Body: Chat History Viewer --}}
+                <div class="flex-1 overflow-y-auto p-6 bg-slate-50/50 space-y-4">
+                    @forelse($viewingConversationMessages as $msg)
+                        <div class="flex {{ $msg['sender'] === 'user' ? 'justify-end' : 'justify-start' }}">
+                            <div class="max-w-[85%] rounded-[20px] px-6 py-4 shadow-sm {{ $msg['sender'] === 'user' ? 'bg-gradient-to-br from-slate-800 to-slate-900 text-white rounded-tr-sm border border-slate-700/50' : 'bg-white border border-slate-200/60 text-slate-700 rounded-tl-sm shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)]' }}">
+                                @if($msg['sender'] === 'bot')
+                                    <div class="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100/80">
+                                        <div class="bg-cyan-50 p-1.5 rounded-lg border border-cyan-100 text-cyan-600">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                            </svg>
+                                        </div>
+                                        <span class="text-[11px] font-black tracking-widest text-slate-800 uppercase">Asistente Virtual</span>
+                                    </div>
+                                @endif
+                                @if(!empty($msg['image_url']))
+                                    <div class="mb-2">
+                                        <img src="{{ $msg['image_url'] }}" class="max-h-56 rounded-lg border border-slate-200 object-contain cursor-zoom-in" onclick="window.open('{{ $msg['image_url'] }}', '_blank')" />
+                                    </div>
+                                @endif
+                                @if(!empty($msg['text']))
+                                    <div class="leading-relaxed whitespace-pre-line prose prose-sm max-w-none {{ $msg['sender'] === 'user' ? 'text-slate-100 prose-invert' : 'text-slate-700' }}">
+                                        {!! nl2br(e($msg['text'])) !!}
+                                    </div>
+                                @endif
+                                <span class="block text-[10px] font-mono {{ $msg['sender'] === 'user' ? 'text-slate-400' : 'text-slate-400' }} text-right mt-3 opacity-80">{{ $msg['timestamp'] }}</span>
+                            </div>
+                        </div>
+                    @empty
                         <div class="py-20 text-center">
-                            <div class="h-16 w-16 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center text-slate-455 text-slate-400 mx-auto mb-4">
+                            <div class="h-16 w-16 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 mx-auto mb-4 shadow-sm">
                                 <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                                 </svg>
                             </div>
-                            <h4 class="text-xs font-mono text-slate-455 text-slate-400 uppercase tracking-widest">Sin errores registrados</h4>
-                            <p class="text-[10px] text-slate-500 mt-1 max-w-sm mx-auto">Cualquier consulta en el chat IA que mencione un error o contenga una imagen del fallo se registrará aquí de forma automática.</p>
+                            <h4 class="text-xs font-mono text-slate-400 uppercase tracking-widest">Conversación Vacía</h4>
                         </div>
-                    @else
-                        <div class="grid grid-cols-1 gap-4">
-                            @foreach($machineErrors as $err)
-                                <div class="relative bg-white border border-slate-200 rounded-2xl p-5 flex flex-col md:flex-row gap-4 shadow-sm group">
-                                    {{-- Delete Button (maintenance/admin mode) --}}
-                                    <button
-                                        wire:click="deleteMachineError('{{ $err->id }}')"
-                                        onclick="window.playAudio('click');"
-                                        title="Eliminar registro"
-                                        class="absolute top-4 right-4 text-slate-400 hover:text-red-650 text-red-600 transition-colors md:opacity-0 group-hover:opacity-100"
-                                    >
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
-
-                                    {{-- Left Side: Image / Status badge --}}
-                                    <div class="flex-shrink-0 flex flex-col items-center justify-start gap-2">
-                                        @if($err->image_path)
-                                            <div class="h-28 w-28 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white cursor-zoom-in" onclick="window.open('{{ asset('storage/' . $err->image_path) }}', '_blank')">
-                                                <img src="{{ asset('storage/' . $err->image_path) }}" class="h-full w-full object-cover" />
-                                            </div>
-                                        @else
-                                            <div class="h-28 w-28 rounded-xl border border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center text-slate-300 shadow-inner">
-                                                <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                </svg>
-                                                <span class="text-[8px] font-bold uppercase mt-1">Sin Imagen</span>
-                                            </div>
-                                        @endif
-                                        <span class="text-[9px] font-mono text-slate-400 mt-1">{{ $err->created_at->format('d/m/Y H:i') }}</span>
-                                    </div>
-
-                                    {{-- Right Side: Details --}}
-                                    <div class="flex-1 min-w-0 pr-6">
-                                        {{-- Operario Message --}}
-                                        <div class="mb-3">
-                                            <span class="text-[9px] font-black tracking-widest text-slate-400 uppercase font-mono">Mensaje del Operario:</span>
-                                            <p class="text-xs font-bold text-slate-800 leading-normal mt-0.5 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 shadow-sm italic">
-                                                "{{ $err->user_message }}"
-                                            </p>
-                                        </div>
-                                        
-                                        {{-- AI Solución --}}
-                                        <div>
-                                            <span class="text-[9px] font-black tracking-widest text-cyan-600 uppercase font-mono">Propuesta de Solución (IA):</span>
-                                            <div class="text-xs text-slate-700 leading-relaxed mt-1 bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm whitespace-pre-wrap prose prose-xs">
-                                                {!! nl2br(e($err->ai_response)) !!}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
+                    @endforelse
                 </div>
             </div>
         </div>
@@ -824,6 +922,78 @@
                         </div>
                     @endif
                 </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- ── Guardar Conversación Modal ── --}}
+    @if($showSaveModal)
+        <div
+            class="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-[110] transition-opacity duration-300"
+            wire:click.self="closeSaveModal"
+        >
+            <div class="w-full max-w-lg bg-white border border-slate-200 rounded-3xl shadow-2xl flex flex-col overflow-hidden transform transition-all duration-300 scale-100">
+                <div class="px-6 py-5 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="h-10 w-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center shadow-sm">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-black text-slate-800 uppercase tracking-wide font-outfit">Guardar Conversación</h3>
+                            <p class="text-[11px] text-slate-500 mt-0.5">Registrar historial manualmente</p>
+                        </div>
+                    </div>
+                    <button wire:click="closeSaveModal" class="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full p-1.5 transition-colors">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <form wire:submit.prevent="saveConversation" class="p-6 space-y-5">
+                    <div>
+                        <label for="saveTitle" class="block text-xs font-black text-slate-700 uppercase tracking-widest mb-2">¿Nombre de la conversación?</label>
+                        <input
+                            type="text"
+                            id="saveTitle"
+                            wire:model.defer="saveTitle"
+                            placeholder="Ej: Problema con el motor principal..."
+                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
+                            required
+                        >
+                        @error('saveTitle') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                    </div>
+                    
+                    <div>
+                        <label for="saveDescription" class="block text-xs font-black text-slate-700 uppercase tracking-widest mb-2">Descripción</label>
+                        <textarea
+                            id="saveDescription"
+                            wire:model.defer="saveDescription"
+                            rows="3"
+                            placeholder="Añade detalles adicionales sobre la solución..."
+                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors resize-none"
+                        ></textarea>
+                        @error('saveDescription') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                    </div>
+                    
+                    <div class="pt-2 flex justify-end gap-3 border-t border-slate-100">
+                        <button
+                            type="button"
+                            wire:click="closeSaveModal"
+                            class="px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            class="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-emerald-500/30 transition-all hover:-translate-y-0.5"
+                        >
+                            Guardar
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     @endif
