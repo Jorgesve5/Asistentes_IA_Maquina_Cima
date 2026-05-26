@@ -941,6 +941,19 @@
                     }
                 });
                 
+                this.quill.root.addEventListener('drop', (e) => {
+                    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+                        for (let i = 0; i < e.dataTransfer.files.length; i++) {
+                            if (e.dataTransfer.files[i].type.indexOf('image') !== -1) {
+                                e.preventDefault();
+                                const file = e.dataTransfer.files[i];
+                                if (file) this.processFile(file);
+                                return;
+                            }
+                        }
+                    }
+                });
+                
                 this.quill.on('text-change', () => {
                     if (this.activeSubTab === 'manual') {
                         this.manualContent = this.quill.root.innerHTML;
@@ -998,12 +1011,14 @@
                             }
                         } catch(e) {
                             console.error(e);
+                            alert('Error al subir la imagen. Es posible que el archivo sea demasiado pesado.');
                         } finally {
                             this.uploadingFile = false;
                         }
                     },
                     () => {
                         this.uploadingFile = false;
+                        alert('Error de subida (Livewire). Comprueba que el archivo no supere el tamaño máximo permitido por el servidor.');
                     },
                     (event) => {}
                 );
