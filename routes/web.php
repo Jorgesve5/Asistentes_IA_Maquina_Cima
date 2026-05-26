@@ -22,3 +22,14 @@ Route::prefix('api')->group(function () {
     Route::post('/machines/{id}/status', [ApiController::class, 'updateMachineStatus']);
     Route::get('/alerts', [ApiController::class, 'getAlerts']);
 });
+
+Route::get('/limpiar-cache', function () {
+    \Illuminate\Support\Facades\Artisan::call('optimize:clear');
+    \Illuminate\Support\Facades\Artisan::call('view:clear');
+    return 'Caché borrada con éxito. Ya puedes volver a la aplicación y probar.';
+});
+
+Route::get('/limpiar-bd', function () {
+    \App\Models\MachineError::truncate();
+    return 'Base de datos borrada con éxito. Historial de errores vaciado. Vuelve a la aplicación y prueba.';
+});
