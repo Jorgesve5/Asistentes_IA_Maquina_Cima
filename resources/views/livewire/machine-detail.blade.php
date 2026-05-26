@@ -1,4 +1,4 @@
-<div class="flex-1 flex flex-col max-w-[1400px] mx-auto w-full px-4 sm:px-6 py-6" x-data="{ init() { $nextTick(() => { this.scrollToBottom('chatbot-box'); this.scrollToBottom('supervisor-box'); }) } }">
+<div class="flex-1 flex flex-col max-w-[1400px] mx-auto w-full px-4 sm:px-6 py-6" x-data="{ init() { $nextTick(() => { if (typeof scrollToBottom === 'function') { scrollToBottom('chatbot-box'); scrollToBottom('supervisor-box'); } }) } }">
     <!-- Back button -->
     <div class="mb-6 flex items-center justify-between">
         <a

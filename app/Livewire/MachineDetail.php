@@ -584,7 +584,8 @@ class MachineDetail extends Component
             ->where('is_saved', true)
             ->find($id);
         if ($conversation) {
-            $this->chatMessages = $conversation->messages;
+            $msgs = $conversation->messages;
+            $this->chatMessages = is_array($msgs) ? $msgs : [];
             session([$this->contextKey => $this->chatMessages]);
             $this->showErrorsModal = false; // Close the modal after loading
             $this->showViewConversationModal = false; // Close view modal if open
@@ -597,7 +598,8 @@ class MachineDetail extends Component
             ->where('is_saved', true)
             ->find($id);
         if ($conversation) {
-            $this->viewingConversationMessages = $conversation->messages ?? [];
+            $msgs = $conversation->messages;
+            $this->viewingConversationMessages = is_array($msgs) ? $msgs : [];
             $this->viewingConversationTitle = $conversation->title;
             $this->showViewConversationModal = true;
             $this->showErrorsModal = false; // Close the list so it doesn't stay behind
