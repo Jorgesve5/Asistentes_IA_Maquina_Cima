@@ -1481,9 +1481,9 @@
                     let sheetContainerId = 'sheetjs-trn-' + viewerId;
                     let sheetTabsId      = 'sheetjs-trn-tabs-' + viewerId;
                     viewerInner = `
-                        <div class="w-full" style="height:600px; display:flex; flex-direction:column; background:#fff;">
+                        <div class="w-full" style="background:#fff; border-radius:8px; border:1px solid #e2e8f0; display:flex; flex-direction:column;">
                             <div id="${sheetTabsId}" style="display:flex;gap:4px;padding:8px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;overflow-x:auto;flex-shrink:0;"></div>
-                            <div style="flex:1;overflow:auto;"><div id="${sheetContainerId}" data-src="${href}" style="min-width:100%;padding:4px;"></div></div>
+                            <div style="overflow-x:auto; overflow-y:visible; width:100%;"><div id="${sheetContainerId}" data-src="${href}" style="min-width:100%;padding:4px;overflow:visible;"></div></div>
                         </div>`;
                 } else if (isImg) {
                     viewerInner = `<div style="height:600px;display:flex;align-items:center;justify-content:center;padding:16px;background:#f8fafc;overflow:auto;"><img src="${href}" alt="${displayName}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;border:1px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,.08);" /></div>`;
