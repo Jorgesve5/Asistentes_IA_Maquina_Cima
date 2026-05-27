@@ -1394,11 +1394,18 @@
             let links = div.querySelectorAll('a');
             links.forEach(link => {
                 let href = link.getAttribute('href') || '';
-                let isPdf = href.toLowerCase().endsWith('.pdf') || 
-                            href.toLowerCase().includes('.pdf?') || 
-                            href.toLowerCase().includes('/training-files/') || 
-                            link.innerText.toLowerCase().includes('.pdf');
-                if (isPdf) {
+                if (!href || href === '#') return;
+
+                // Detect any file attachment link: has a size-info span, or href points to a known file type/storage path
+                let hrefLower = href.toLowerCase();
+                let spanEl = link.querySelector('span');
+                let hasSpanWithSize = spanEl && /\d+\s*(?:KB|MB|GB)/i.test(spanEl.innerText || '');
+                let isFileLink = hasSpanWithSize ||
+                                 hrefLower.includes('/storage/') ||
+                                 hrefLower.includes('/training-files/') ||
+                                 /\.(pdf|xls|xlsx|doc|docx|ppt|pptx|png|jpg|jpeg|gif|webp|zip|rar|mp4|mov|avi|txt|csv)(\?|$)/i.test(hrefLower);
+
+                if (isFileLink) {
                     if (!pdfGroups[href]) {
                         pdfGroups[href] = [];
                     }
@@ -1412,22 +1419,29 @@
                 let sizeInfo = '';
                 
                 group.forEach(link => {
-                    let text = link.innerText.trim();
-                    let sizeMatch = text.match(/(\d+(?:\.\d+)?\s*(?:KB|MB|GB|kb|mb|gb))/i);
-                    if (sizeMatch) {
-                        sizeInfo = sizeMatch[1].toUpperCase();
+                    // Extract size from the metadata span (e.g. "XLSX · 5 KB")
+                    let sizeSpan = link.querySelector('span');
+                    if (sizeSpan) {
+                        let sizeMatch = (sizeSpan.innerText || '').match(/(\d+(?:\.\d+)?\s*(?:KB|MB|GB))/i);
+                        if (sizeMatch) sizeInfo = sizeMatch[1].toUpperCase();
                     }
-                    
-                    let isMetadata = text.toLowerCase() === 'pdf' || 
-                                     text.includes('·') || 
-                                     /^\s*(?:pdf\s*)?\(?\d+(?:\.\d+)?\s*(?:kb|mb|gb)\)?\s*$/i.test(text);
-                    
-                    if (!isMetadata) {
-                        let cleaned = text.replace('📄', '').trim();
-                        if (cleaned) displayName = cleaned;
-                    }
+
+                    // Extract filename from direct text nodes only (ignoring child spans)
+                    let nameText = '';
+                    link.childNodes.forEach(function(node) {
+                        if (node.nodeType === Node.TEXT_NODE) {
+                            nameText += node.textContent;
+                        }
+                    });
+                    // Strip emojis and trim
+                    nameText = nameText.replace(/[\u{1F300}-\u{1FFFF}]/gu, '')
+                                       .replace(/[\u2600-\u27BF]/gu, '')
+                                       .replace(/[\uFE00-\uFE0F]/g, '')
+                                       .trim();
+                    if (nameText) displayName = nameText;
                 });
                 
+                // Fallback: extract filename from the URL
                 if (!displayName) {
                     try {
                         let urlParts = href.split('/');
@@ -1489,7 +1503,7 @@
                     viewerInner = `
                         <div class="w-full" style="height:600px; display:flex; flex-direction:column; background:#fff;">
                             <div id="${sheetTabsId}" style="display:flex;gap:4px;padding:8px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;overflow-x:auto;flex-shrink:0;"></div>
-                            <div style="flex:1;overflow:auto;"><div id="${sheetContainerId}" style="min-width:100%;padding:4px;"></div></div>
+                            <div style="flex:1;overflow:auto;"><div id="${sheetContainerId}" data-src="${href}" style="min-width:100%;padding:4px;"></div></div>
                         </div>`;
                 } else if (isImg) {
                     viewerInner = `<div style="height:600px;display:flex;align-items:center;justify-content:center;padding:16px;background:#f8fafc;overflow:auto;"><img src="${href}" alt="${displayName}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;border:1px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,.08);" /></div>`;
@@ -1576,8 +1590,13 @@
                     let clone = parentP.cloneNode(true);
                     let linkInClone = clone.querySelector('a');
                     if (linkInClone) linkInClone.remove();
-                    let textLeft = clone.innerText.trim();
-                    if (textLeft === '' || textLeft === '📄') {
+                    // Strip all emojis to check if any real text remains
+                    let textLeft = clone.innerText.trim()
+                        .replace(/[\u{1F300}-\u{1FFFF}]/gu, '')
+                        .replace(/[\u2600-\u27BF]/gu, '')
+                        .replace(/[\uFE00-\uFE0F]/g, '')
+                        .trim();
+                    if (textLeft === '') {
                         parentP.parentNode.replaceChild(widgetNode, parentP);
                     } else {
                         firstLink.parentNode.replaceChild(widgetNode, firstLink);

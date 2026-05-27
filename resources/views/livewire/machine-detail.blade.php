@@ -1302,11 +1302,18 @@
             let links = div.querySelectorAll('a');
             links.forEach(link => {
                 let href = link.getAttribute('href') || '';
-                let isPdf = href.toLowerCase().endsWith('.pdf') || 
-                            href.toLowerCase().includes('.pdf?') || 
-                            href.toLowerCase().includes('/training-files/') || 
-                            link.innerText.toLowerCase().includes('.pdf');
-                if (isPdf) {
+                if (!href || href === '#') return;
+
+                // Detect any file attachment link: has a size-info span, or href points to a known file type/storage path
+                let hrefLower = href.toLowerCase();
+                let spanEl = link.querySelector('span');
+                let hasSpanWithSize = spanEl && /\d+\s*(?:KB|MB|GB)/i.test(spanEl.innerText || '');
+                let isFileLink = hasSpanWithSize ||
+                                 hrefLower.includes('/storage/') ||
+                                 hrefLower.includes('/training-files/') ||
+                                 /\.(pdf|xls|xlsx|doc|docx|ppt|pptx|png|jpg|jpeg|gif|webp|zip|rar|mp4|mov|avi|txt|csv)(\?|$)/i.test(hrefLower);
+
+                if (isFileLink) {
                     if (!pdfGroups[href]) {
                         pdfGroups[href] = [];
                     }
@@ -1320,22 +1327,29 @@
                 let sizeInfo = '';
                 
                 group.forEach(link => {
-                    let text = link.innerText.trim();
-                    let sizeMatch = text.match(/(\d+(?:\.\d+)?\s*(?:KB|MB|GB|kb|mb|gb))/i);
-                    if (sizeMatch) {
-                        sizeInfo = sizeMatch[1].toUpperCase();
+                    // Extract size from the metadata span (e.g. "XLSX · 5 KB")
+                    let sizeSpan = link.querySelector('span');
+                    if (sizeSpan) {
+                        let sizeMatch = (sizeSpan.innerText || '').match(/(\d+(?:\.\d+)?\s*(?:KB|MB|GB))/i);
+                        if (sizeMatch) sizeInfo = sizeMatch[1].toUpperCase();
                     }
-                    
-                    let isMetadata = text.toLowerCase() === 'pdf' || 
-                                     text.includes('·') || 
-                                     /^\s*(?:pdf\s*)?\(?\d+(?:\.\d+)?\s*(?:kb|mb|gb)\)?\s*$/i.test(text);
-                    
-                    if (!isMetadata) {
-                        let cleaned = text.replace('📄', '').trim();
-                        if (cleaned) displayName = cleaned;
-                    }
+
+                    // Extract filename from direct text nodes only (ignoring child spans)
+                    let nameText = '';
+                    link.childNodes.forEach(function(node) {
+                        if (node.nodeType === Node.TEXT_NODE) {
+                            nameText += node.textContent;
+                        }
+                    });
+                    // Strip emojis and trim
+                    nameText = nameText.replace(/[\u{1F300}-\u{1FFFF}]/gu, '')
+                                       .replace(/[\u2600-\u27BF]/gu, '')
+                                       .replace(/[\uFE00-\uFE0F]/g, '')
+                                       .trim();
+                    if (nameText) displayName = nameText;
                 });
                 
+                // Fallback: extract filename from URL
                 if (!displayName) {
                     try {
                         let urlParts = href.split('/');
@@ -1358,7 +1372,7 @@
                     let parts = displayName.split('.');
                     if (parts.length > 1) {
                         let last = parts.pop().toUpperCase();
-                        if (last.length <= 4) ext = last;
+                        if (last.length <= 5) ext = last;
                     }
                 }
 
@@ -1374,7 +1388,7 @@
                 } else if (ext.includes('DOC')) {
                     badgeStyle = 'bg-blue-50 border-blue-100 text-blue-600';
                     iconGradient = 'from-blue-500 via-indigo-500 to-blue-700 shadow-blue-500/20';
-                } else if (ext.includes('IMG')) {
+                } else if (ext.includes('IMG') || ext === 'PNG' || ext === 'JPG' || ext === 'JPEG' || ext === 'GIF' || ext === 'WEBP') {
                     badgeStyle = 'bg-purple-50 border-purple-100 text-purple-600';
                     iconGradient = 'from-purple-500 via-fuchsia-500 to-purple-700 shadow-purple-500/20';
                 } else {
@@ -1384,6 +1398,30 @@
                 
                 let viewerId = 'pdf-viewer-' + idx + '-' + Math.floor(Math.random() * 100000);
                 let btnId = 'pdf-btn-' + viewerId;
+
+                let isExcel = ext === 'XLSX' || ext === 'XLS';
+                let isImg   = ext === 'IMG'  || ext === 'PNG' || ext === 'JPG' || ext === 'JPEG' || ext === 'GIF' || ext === 'WEBP';
+                let isPdfFile = ext === 'PDF';
+
+                // Build the viewer inner HTML depending on file type
+                let viewerInner = '';
+                if (isExcel) {
+                    let sheetContainerId = 'sheetjs-trn-' + viewerId;
+                    let sheetTabsId      = 'sheetjs-trn-tabs-' + viewerId;
+                    viewerInner = `
+                        <div class="w-full" style="height:600px; display:flex; flex-direction:column; background:#fff;">
+                            <div id="${sheetTabsId}" style="display:flex;gap:4px;padding:8px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;overflow-x:auto;flex-shrink:0;"></div>
+                            <div style="flex:1;overflow:auto;"><div id="${sheetContainerId}" data-src="${href}" style="min-width:100%;padding:4px;"></div></div>
+                        </div>`;
+                } else if (isImg) {
+                    viewerInner = `<div style="height:600px;display:flex;align-items:center;justify-content:center;padding:16px;background:#f8fafc;overflow:auto;"><img src="${href}" alt="${displayName}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;border:1px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,.08);" /></div>`;
+                } else if (isPdfFile) {
+                    viewerInner = `<iframe src="${href}#view=FitH&toolbar=1" class="w-full border-none rounded-lg bg-white shadow-inner" style="height:600px;" loading="lazy"></iframe>`;
+                } else {
+                    // Google Docs Viewer para Word, PPT, y otros (requiere URL pública)
+                    let gdocsUrl = 'https://docs.google.com/viewer?url=' + encodeURIComponent(href) + '&embedded=true';
+                    viewerInner = `<iframe src="${gdocsUrl}" class="w-full border-none rounded-lg bg-white shadow-inner" style="height:600px;" loading="lazy"></iframe>`;
+                }
                 
                 let pdfWidget = `<div class="not-prose my-6 rounded-2xl border border-slate-200/80 overflow-hidden shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_-6px_rgba(0,0,0,0.1)] transition-all duration-300 bg-white group/card">
                     <div class="px-5 py-4 bg-gradient-to-r from-white via-white to-slate-50/30 flex flex-wrap items-center justify-between gap-4">
@@ -1403,13 +1441,13 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-2.5 flex-shrink-0">
-                            <a href="${href}" target="_blank" rel="noopener" class="px-4 py-2 bg-slate-100 hover:bg-slate-800 text-slate-600 hover:text-white text-[11px] font-bold rounded-xl transition-all duration-200 flex items-center gap-2 no-underline shadow-sm border border-slate-200/40">
+                            <a href="${href}" download="${displayName}" class="px-4 py-2 bg-slate-100 hover:bg-slate-800 text-slate-600 hover:text-white text-[11px] font-bold rounded-xl transition-all duration-200 flex items-center gap-2 no-underline shadow-sm border border-slate-200/40">
                                 <svg class="h-3.5 w-3.5" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                 </svg>
-                                <span>Abrir</span>
+                                <span>Descargar</span>
                             </a>
-                            <button id="${btnId}" type="button" onclick="window.togglePdfViewer('${viewerId}', '${btnId}')" class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white text-[11px] font-bold rounded-xl transition-all duration-200 flex items-center gap-2 shadow-sm shadow-cyan-500/20 hover:shadow-md hover:shadow-cyan-500/30">
+                            <button id="${btnId}" type="button" onclick="togglePdfViewer('${viewerId}', '${btnId}')" class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white text-[11px] font-bold rounded-xl transition-all duration-200 flex items-center gap-2 shadow-sm shadow-cyan-500/20 hover:shadow-md hover:shadow-cyan-500/30">
                                 <svg class="h-3.5 w-3.5" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -1426,9 +1464,9 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
                                 </div>
-                                <span class="text-[10px] font-black text-slate-300 tracking-wider uppercase">Vista Previa del Documento</span>
+                                <span class="text-[10px] font-black text-slate-300 tracking-wider uppercase">Vista Previa · ${displayName}</span>
                             </div>
-                            <button type="button" onclick="window.closePdfViewer(this)" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white text-[10px] font-bold uppercase tracking-wider transition-all">
+                            <button type="button" onclick="closePdfViewer(this)" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white text-[10px] font-bold uppercase tracking-wider transition-all">
                                 <svg class="h-3 w-3" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                                 </svg>
@@ -1436,10 +1474,10 @@
                             </button>
                         </div>
                         <div class="bg-slate-100 p-2">
-                            <iframe src="${href}#view=FitH&toolbar=1" class="w-full border-none rounded-lg bg-white shadow-inner" style="height: 600px;"></iframe>
+                            ${viewerInner}
                         </div>
                         <div class="px-5 py-2.5 bg-slate-50 border-t border-slate-150 flex items-center justify-between">
-                            <span class="text-[10px] text-slate-400 font-mono tracking-wide">Visor PDF Interactivo</span>
+                            <span class="text-[10px] text-slate-400 font-mono tracking-wide">Visor de Documento</span>
                             <a href="${href}" download="${displayName}" class="text-[10px] text-cyan-600 hover:text-cyan-700 font-bold flex items-center gap-1 no-underline hover:underline transition-all">
                                 <svg class="h-3 w-3" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -1460,8 +1498,13 @@
                     let clone = parentP.cloneNode(true);
                     let linkInClone = clone.querySelector('a');
                     if (linkInClone) linkInClone.remove();
-                    let textLeft = clone.innerText.trim();
-                    if (textLeft === '' || textLeft === '📄') {
+                    // Strip all emojis to check if any real text remains
+                    let textLeft = clone.innerText.trim()
+                        .replace(/[\u{1F300}-\u{1FFFF}]/gu, '')
+                        .replace(/[\u2600-\u27BF]/gu, '')
+                        .replace(/[\uFE00-\uFE0F]/g, '')
+                        .trim();
+                    if (textLeft === '') {
                         parentP.parentNode.replaceChild(widgetNode, parentP);
                     } else {
                         firstLink.parentNode.replaceChild(widgetNode, firstLink);
