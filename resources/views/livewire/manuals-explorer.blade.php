@@ -253,10 +253,23 @@
 
                     <div class="flex items-center gap-3">
                         @if($viewingManual->file_path)
+                            <!-- Abrir en nueva pestaña con nombre correcto -->
                             <a 
-                                href="{{ asset('storage/' . $viewingManual->file_path) }}" 
-                                download="{{ $viewingManual->fileName }}" 
+                                href="{{ route('manual.view', $viewingManual->id) }}" 
+                                target="_blank"
+                                rel="noopener"
                                 onclick="window.playAudio('click');" 
+                                class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 shadow-sm"
+                            >
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                                <span class="hidden sm:inline">Abrir</span>
+                            </a>
+                            <!-- Descargar con nombre correcto -->
+                            <a 
+                                href="{{ route('manual.download', $viewingManual->id) }}" 
+                                onclick="window.playAudio('click');"
                                 class="flex items-center gap-1.5 bg-cyan-50 border border-cyan-100 hover:bg-cyan-100 text-cyan-700 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 shadow-sm"
                             >
                                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -280,64 +293,57 @@
                 <div class="flex-1 bg-slate-100 overflow-hidden relative flex flex-col items-center justify-center">
                     @if($viewingManual->file_path)
                         @if($viewingManual->file_type === 'pdf')
-                            <!-- PDF iframe Viewer -->
+                            <!-- PDF nativo -->
                             <iframe 
-                                src="{{ asset('storage/' . $viewingManual->file_path) }}#toolbar=1&navpanes=0" 
+                                src="{{ route('manual.view', $viewingManual->id) }}#toolbar=1&navpanes=0" 
                                 class="w-full h-full border-none"
                             ></iframe>
+
                         @elseif($viewingManual->file_type === 'image')
-                            <!-- Image Viewer -->
+                            <!-- Imagen nativa -->
                             <div class="w-full h-full p-6 flex items-center justify-center overflow-auto bg-slate-50">
                                 <img 
-                                    src="{{ asset('storage/' . $viewingManual->file_path) }}" 
+                                    src="{{ route('manual.view', $viewingManual->id) }}" 
                                     alt="{{ $viewingManual->fileName }}" 
                                     class="max-w-full max-h-full object-contain rounded-lg border border-slate-200 shadow-lg"
                                 />
                             </div>
-                        @elseif($viewingManual->file_type === 'word' || $viewingManual->file_type === 'excel')
-                            <!-- Word/Excel Text Preview -->
-                            <div class="w-full h-full p-6 sm:p-8 overflow-y-auto flex flex-col bg-slate-50">
-                                <div class="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-2xl text-xs font-mono mb-6 leading-relaxed max-w-3xl mx-auto flex-shrink-0 flex items-start gap-3 shadow-sm">
-                                    <svg class="h-5 w-5 flex-shrink-0 mt-0.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                    </svg>
-                                    <div>
-                                        <strong>Vista previa del contenido de texto extraído:</strong> Esta máquina y el chat IA utilizan el texto a continuación para entender el manual. Para conservar las tablas, imágenes y formateo original, por favor descargue el archivo completo presionando el botón superior.
-                                    </div>
-                                </div>
-                                <div class="flex-1 max-w-3xl mx-auto w-full bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 font-mono text-xs text-slate-700 leading-relaxed overflow-y-auto break-words whitespace-pre-wrap shadow-sm">
-                                    @if(trim($viewingManual->text))
-                                        {{ $viewingManual->text }}
-                                    @else
-                                        <span class="text-slate-400 italic">No se pudo extraer texto descriptivo de este documento.</span>
-                                    @endif
+
+                        @elseif($viewingManual->file_type === 'excel')
+                            <!-- SheetJS: renderiza XLS/XLSX directamente en el navegador -->
+                            <div class="w-full h-full flex flex-col bg-white overflow-hidden">
+                                <div id="me-sheetjs-tabs-{{ $viewingManual->id }}" class="flex gap-1 px-4 pt-3 bg-slate-50 border-b border-slate-200 overflow-x-auto flex-shrink-0"></div>
+                                <div class="flex-1 overflow-auto">
+                                    <div id="me-sheetjs-output-{{ $viewingManual->id }}" class="min-w-full p-2"></div>
                                 </div>
                             </div>
+                            <script>
+                            (function() {
+                                var fileUrl = '{{ route('manual.view', $viewingManual->id) }}';
+                                var containerId = 'me-sheetjs-output-{{ $viewingManual->id }}';
+                                var tabsId = 'me-sheetjs-tabs-{{ $viewingManual->id }}';
+                                function loadSheetJS(cb) { if (window.XLSX) { cb(); return; } var s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s.onload = cb; document.head.appendChild(s); }
+                                function renderSheet(wb, sheetName) { var ws = wb.Sheets[sheetName]; var html = XLSX.utils.sheet_to_html(ws, {editable: false}); var c = document.getElementById(containerId); c.innerHTML = '<style>#' + containerId + ' table{border-collapse:collapse;width:100%;font-size:12px;font-family:monospace}#' + containerId + ' td,#' + containerId + ' th{border:1px solid #e2e8f0;padding:4px 8px;white-space:nowrap}#' + containerId + ' tr:nth-child(even){background:#f8fafc}#' + containerId + ' tr:first-child{background:#1e293b;color:white;font-weight:bold}</style>' + html; }
+                                function renderTabs(wb, active) { var tabs = document.getElementById(tabsId); tabs.innerHTML = ''; wb.SheetNames.forEach(function(name) { var btn = document.createElement('button'); btn.textContent = name; btn.className = 'px-3 py-1.5 text-xs font-bold rounded-t-lg transition-all ' + (name === active ? 'bg-white border border-b-white border-slate-200 text-cyan-700 -mb-px z-10 relative' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'); btn.onclick = function() { renderSheet(wb, name); renderTabs(wb, name); }; tabs.appendChild(btn); }); }
+                                loadSheetJS(function() { fetch(fileUrl).then(function(r){ return r.arrayBuffer(); }).then(function(data){ var wb = XLSX.read(data,{type:'array'}); var first = wb.SheetNames[0]; renderTabs(wb,first); renderSheet(wb,first); }).catch(function(){ document.getElementById(containerId).innerHTML='<div class="p-8 text-center text-slate-500 text-xs">No se pudo cargar el archivo. Usa el botón Descargar.</div>'; }); });
+                            })();
+                            </script>
+
+                        @elseif($viewingManual->file_type === 'word')
+                            <!-- Word: Microsoft Office Online viewer -->
+                            <iframe
+                                src="https://view.officeapps.live.com/op/embed.aspx?src={{ urlencode(route('manual.view', $viewingManual->id)) }}"
+                                class="w-full h-full border-none"
+                                loading="lazy"
+                            ></iframe>
+
                         @else
-                            <!-- Generic / Other file content viewer -->
-                            <div class="w-full h-full p-6 sm:p-8 overflow-y-auto flex flex-col items-center justify-center bg-slate-50">
-                                <div class="text-center max-w-md">
-                                    <div class="h-16 w-16 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 mx-auto mb-4 shadow-sm">
-                                        <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                    </div>
-                                    <h4 class="text-sm font-black text-slate-800 uppercase tracking-wider">Formato no visualizable en navegador</h4>
-                                    <p class="text-xs text-slate-550 text-slate-500 mt-2 mb-6">
-                                        El tipo de archivo no admite previsualización interactiva directa en el visor.
-                                    </p>
-                                    <a 
-                                        href="{{ asset('storage/' . $viewingManual->file_path) }}" 
-                                        download="{{ $viewingManual->fileName }}" 
-                                        class="inline-flex items-center gap-1.5 bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md"
-                                    >
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                        </svg>
-                                        <span>Descargar y Abrir</span>
-                                    </a>
-                                </div>
-                            </div>
+                            <!-- Cualquier otro formato: Google Docs Viewer -->
+                            <iframe
+                                src="https://docs.google.com/viewer?url={{ urlencode(route('manual.view', $viewingManual->id)) }}&embedded=true"
+                                class="w-full h-full border-none"
+                                loading="lazy"
+                            ></iframe>
                         @endif
                     @else
                         <!-- Legacy record text visor fallback -->

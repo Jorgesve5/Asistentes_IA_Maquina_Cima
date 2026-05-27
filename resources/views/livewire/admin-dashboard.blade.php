@@ -1308,12 +1308,66 @@
             const v = document.getElementById(viewerId);
             const b = document.getElementById(btnId);
             if (!v) return;
-            const eyeOpenSvg = '<svg style="height:14px;width:14px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg><span>Visualizar</span>';
+            const eyeOpenSvg   = '<svg style="height:14px;width:14px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg><span>Visualizar</span>';
             const eyeClosedSvg = '<svg style="height:14px;width:14px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L6.59 6.59m7.532 7.532l3.29 3.29M3 3l18 18"/></svg><span>Ocultar</span>';
 
             if (v.style.display === 'none' || !v.style.display) {
                 v.style.display = 'block';
                 if (b) b.innerHTML = eyeClosedSvg;
+
+                // --- SheetJS: cargar Excel si aplica y aún no se ha cargado ---
+                var sheetOutput = v.querySelector('[id^="sheetjs-trn-"][id$="' + viewerId + '"]') ||
+                                  v.querySelector('[id^="sheetjs-trn-"]');
+                if (sheetOutput && !sheetOutput.dataset.loaded) {
+                    sheetOutput.dataset.loaded = '1';
+                    var sheetTabs = v.querySelector('[id^="sheetjs-trn-tabs-"]');
+                    var fileUrl   = sheetOutput.dataset.src || (function() {
+                        // Intentar obtener URL del enlace de descarga en el mismo widget
+                        var card = v.closest('[class*="group/card"]') || v.parentElement;
+                        var a = card ? card.querySelector('a[download]') : null;
+                        return a ? a.href : null;
+                    })();
+
+                    sheetOutput.innerHTML = '<div style="padding:32px;text-align:center;color:#94a3b8;font-size:12px;">Cargando hoja de cálculo…</div>';
+
+                    function doRender(url) {
+                        function loadXLSX(cb) { if (window.XLSX) { cb(); return; } var s = document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s.onload=cb; document.head.appendChild(s); }
+                        function renderSheet(wb, name) {
+                            var ws = wb.Sheets[name];
+                            var html = XLSX.utils.sheet_to_html(ws, {editable:false});
+                            var cid = sheetOutput.id;
+                            sheetOutput.innerHTML = '<style>#'+cid+' table{border-collapse:collapse;width:100%;font-size:12px;font-family:monospace}#'+cid+' td,#'+cid+' th{border:1px solid #e2e8f0;padding:4px 8px;white-space:nowrap}#'+cid+' tr:nth-child(even){background:#f8fafc}#'+cid+' tr:first-child{background:#1e293b;color:#fff;font-weight:bold}</style>'+html;
+                        }
+                        function renderTabs(wb, active) {
+                            if (!sheetTabs) return;
+                            sheetTabs.innerHTML='';
+                            wb.SheetNames.forEach(function(name){
+                                var btn=document.createElement('button');
+                                btn.textContent=name;
+                                btn.style.cssText='padding:4px 10px;font-size:11px;font-weight:700;border-radius:6px 6px 0 0;cursor:pointer;border:none;transition:all .15s;' + (name===active?'background:#fff;color:#0e7490;border:1px solid #e2e8f0;margin-bottom:-1px;':'background:#f1f5f9;color:#64748b;');
+                                btn.onclick=function(){renderSheet(wb,name);renderTabs(wb,name);};
+                                sheetTabs.appendChild(btn);
+                            });
+                        }
+                        loadXLSX(function(){
+                            fetch(url).then(function(r){return r.arrayBuffer();}).then(function(data){
+                                var wb=XLSX.read(data,{type:'array'});
+                                var first=wb.SheetNames[0];
+                                renderTabs(wb,first);
+                                renderSheet(wb,first);
+                            }).catch(function(){
+                                sheetOutput.innerHTML='<div style="padding:32px;text-align:center;color:#94a3b8;font-size:12px;">No se pudo cargar el Excel. Usa el botón Descargar.</div>';
+                            });
+                        });
+                    }
+
+                    if (fileUrl) {
+                        doRender(fileUrl);
+                    } else {
+                        sheetOutput.innerHTML='<div style="padding:32px;text-align:center;color:#94a3b8;font-size:12px;">No se encontró la URL del archivo.</div>';
+                    }
+                }
+                // -----------------------------------------------------------------
             } else {
                 v.style.display = 'none';
                 if (b) b.innerHTML = eyeOpenSvg;
@@ -1423,6 +1477,30 @@
                 let viewerId = 'pdf-viewer-' + idx + '-' + Math.floor(Math.random() * 100000);
                 let btnId = 'pdf-btn-' + viewerId;
                 
+                let isExcel = ext === 'XLSX' || ext === 'XLS';
+                let isImg   = ext === 'IMG'  || ext === 'PNG' || ext === 'JPG' || ext === 'JPEG' || ext === 'GIF' || ext === 'WEBP';
+                let isPdf   = ext === 'PDF';
+
+                // Build the viewer inner HTML depending on file type
+                let viewerInner = '';
+                if (isExcel) {
+                    let sheetContainerId = 'sheetjs-trn-' + viewerId;
+                    let sheetTabsId      = 'sheetjs-trn-tabs-' + viewerId;
+                    viewerInner = `
+                        <div class="w-full" style="height:600px; display:flex; flex-direction:column; background:#fff;">
+                            <div id="${sheetTabsId}" style="display:flex;gap:4px;padding:8px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;overflow-x:auto;flex-shrink:0;"></div>
+                            <div style="flex:1;overflow:auto;"><div id="${sheetContainerId}" style="min-width:100%;padding:4px;"></div></div>
+                        </div>`;
+                } else if (isImg) {
+                    viewerInner = `<div style="height:600px;display:flex;align-items:center;justify-content:center;padding:16px;background:#f8fafc;overflow:auto;"><img src="${href}" alt="${displayName}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;border:1px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,.08);" /></div>`;
+                } else if (isPdf) {
+                    viewerInner = `<iframe src="${href}#view=FitH&toolbar=1" class="w-full border-none rounded-lg bg-white shadow-inner" style="height:600px;" loading="lazy"></iframe>`;
+                } else {
+                    // Google Docs Viewer para Word, PPT, y otros (requiere URL pública)
+                    let gdocsUrl = 'https://docs.google.com/viewer?url=' + encodeURIComponent(href) + '&embedded=true';
+                    viewerInner = `<iframe src="${gdocsUrl}" class="w-full border-none rounded-lg bg-white shadow-inner" style="height:600px;" loading="lazy"></iframe>`;
+                }
+
                 let pdfWidget = `<div class="not-prose my-6 rounded-2xl border border-slate-200/80 overflow-hidden shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_-6px_rgba(0,0,0,0.1)] transition-all duration-300 bg-white group/card">
                     <div class="px-5 py-4 bg-gradient-to-r from-white via-white to-slate-50/30 flex flex-wrap items-center justify-between gap-4">
                         <div class="flex items-center gap-3.5 min-w-0 flex-1">
@@ -1441,11 +1519,11 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-2.5 flex-shrink-0">
-                            <a href="${href}" target="_blank" rel="noopener" class="px-4 py-2 bg-slate-100 hover:bg-slate-800 text-slate-600 hover:text-white text-[11px] font-bold rounded-xl transition-all duration-200 flex items-center gap-2 no-underline shadow-sm border border-slate-200/40">
+                            <a href="${href}" download="${displayName}" class="px-4 py-2 bg-slate-100 hover:bg-slate-800 text-slate-600 hover:text-white text-[11px] font-bold rounded-xl transition-all duration-200 flex items-center gap-2 no-underline shadow-sm border border-slate-200/40">
                                 <svg class="h-3.5 w-3.5" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                 </svg>
-                                <span>Abrir</span>
+                                <span>Descargar</span>
                             </a>
                             <button id="${btnId}" type="button" onclick="window.togglePdfViewer('${viewerId}', '${btnId}')" class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white text-[11px] font-bold rounded-xl transition-all duration-200 flex items-center gap-2 shadow-sm shadow-cyan-500/20 hover:shadow-md hover:shadow-cyan-500/30">
                                 <svg class="h-3.5 w-3.5" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -1464,7 +1542,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
                                 </div>
-                                <span class="text-[10px] font-black text-slate-300 tracking-wider uppercase">Vista Previa del Documento</span>
+                                <span class="text-[10px] font-black text-slate-300 tracking-wider uppercase">Vista Previa · ${displayName}</span>
                             </div>
                             <button type="button" onclick="window.closePdfViewer(this)" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white text-[10px] font-bold uppercase tracking-wider transition-all">
                                 <svg class="h-3 w-3" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -1474,10 +1552,10 @@
                             </button>
                         </div>
                         <div class="bg-slate-100 p-2">
-                            <iframe src="${href}#view=FitH&toolbar=1" class="w-full border-none rounded-lg bg-white shadow-inner" style="height: 600px;"></iframe>
+                            ${viewerInner}
                         </div>
                         <div class="px-5 py-2.5 bg-slate-50 border-t border-slate-150 flex items-center justify-between">
-                            <span class="text-[10px] text-slate-400 font-mono tracking-wide">Visor PDF Interactivo</span>
+                            <span class="text-[10px] text-slate-400 font-mono tracking-wide">Visor de Documento</span>
                             <a href="${href}" download="${displayName}" class="text-[10px] text-cyan-600 hover:text-cyan-700 font-bold flex items-center gap-1 no-underline hover:underline transition-all">
                                 <svg class="h-3 w-3" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
