@@ -1426,13 +1426,12 @@
                         if (sizeMatch) sizeInfo = sizeMatch[1].toUpperCase();
                     }
 
-                    // Extract filename from direct text nodes only (ignoring child spans)
-                    let nameText = '';
-                    link.childNodes.forEach(function(node) {
-                        if (node.nodeType === Node.TEXT_NODE) {
-                            nameText += node.textContent;
-                        }
-                    });
+                    // Extract filename properly, ignoring the size span but supporting styled spans / text nodes
+                    let linkClone = link.cloneNode(true);
+                    let innerSpans = linkClone.querySelectorAll('span');
+                    innerSpans.forEach(s => s.remove());
+                    let nameText = linkClone.textContent || '';
+
                     // Strip emojis and trim
                     nameText = nameText.replace(/[\u{1F300}-\u{1FFFF}]/gu, '')
                                        .replace(/[\u2600-\u27BF]/gu, '')
@@ -1510,9 +1509,21 @@
                 } else if (isPdf) {
                     viewerInner = `<iframe src="${href}#view=FitH&toolbar=1" class="w-full border-none rounded-lg bg-white shadow-inner" style="height:600px;" loading="lazy"></iframe>`;
                 } else {
-                    // Google Docs Viewer para Word, PPT, y otros (requiere URL pública)
-                    let gdocsUrl = 'https://docs.google.com/viewer?url=' + encodeURIComponent(href) + '&embedded=true';
-                    viewerInner = `<iframe src="${gdocsUrl}" class="w-full border-none rounded-lg bg-white shadow-inner" style="height:600px;" loading="lazy"></iframe>`;
+                    // Mostrar mensaje indicando que no se puede visualizar este tipo de archivo directamente
+                    viewerInner = `
+                        <div style="height:250px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px; background:#f8fafc; text-align:center; border-radius:12px; border:1px dashed #cbd5e1; margin: 10px;">
+                            <span style="font-size:36px; margin-bottom:12px;">🚫</span>
+                            <h4 style="font-size:15px; font-weight:700; color:#334155; margin:0 0 8px 0;">No se puede visualizar este documento</h4>
+                            <p style="font-size:12px; color:#64748b; margin:0 0 16px 0; max-width:320px;">
+                                Los archivos con extensión <strong>.${ext}</strong> no se pueden previsualizar directamente en el navegador.
+                            </p>
+                            <a href="${href}" download="${displayName}" style="padding:8px 16px; background:#0f172a; color:#fff; font-size:11px; font-weight:700; border-radius:8px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#1e293b';" onmouseout="this.style.backgroundColor='#0f172a';">
+                                <svg style="height:14px; width:14px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                Descargar Archivo
+                            </a>
+                        </div>`;
                 }
 
                 let pdfWidget = `<div class="not-prose my-6 rounded-2xl border border-slate-200/80 overflow-hidden shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_-6px_rgba(0,0,0,0.1)] transition-all duration-300 bg-white group/card">

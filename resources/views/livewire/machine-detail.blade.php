@@ -1269,6 +1269,60 @@
             if (v.style.display === 'none' || !v.style.display) {
                 v.style.display = 'block';
                 if (b) b.innerHTML = eyeClosedSvg;
+
+                // --- SheetJS: cargar Excel si aplica y aún no se ha cargado ---
+                var sheetOutput = v.querySelector('[id^="sheetjs-trn-"][id$="' + viewerId + '"]') ||
+                                  v.querySelector('[id^="sheetjs-trn-"]');
+                if (sheetOutput && !sheetOutput.dataset.loaded) {
+                    sheetOutput.dataset.loaded = '1';
+                    var sheetTabs = v.querySelector('[id^="sheetjs-trn-tabs-"]');
+                    var fileUrl   = sheetOutput.dataset.src || (function() {
+                        // Intentar obtener URL del enlace de descarga en el mismo widget
+                        var card = v.closest('[class*="group/card"]') || v.parentElement;
+                        var a = card ? card.querySelector('a[download]') : null;
+                        return a ? a.href : null;
+                    })();
+
+                    sheetOutput.innerHTML = '<div style="padding:32px;text-align:center;color:#94a3b8;font-size:12px;">Cargando hoja de cálculo…</div>';
+
+                    function doRender(url) {
+                        function loadXLSX(cb) { if (window.XLSX) { cb(); return; } var s = document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s.onload=cb; document.head.appendChild(s); }
+                        function renderSheet(wb, name) {
+                            var ws = wb.Sheets[name];
+                            var html = XLSX.utils.sheet_to_html(ws, {editable:false});
+                            var cid = sheetOutput.id;
+                            sheetOutput.innerHTML = '<style>#'+cid+' table{border-collapse:collapse;width:100%;font-size:12px;font-family:monospace}#'+cid+' td,#'+cid+' th{border:1px solid #e2e8f0;padding:4px 8px;white-space:nowrap}#'+cid+' tr:nth-child(even){background:#f8fafc}#'+cid+' tr:first-child{background:#1e293b;color:#fff;font-weight:bold}</style>'+html;
+                        }
+                        function renderTabs(wb, active) {
+                            if (!sheetTabs) return;
+                            sheetTabs.innerHTML='';
+                            wb.SheetNames.forEach(function(name){
+                                var btn=document.createElement('button');
+                                btn.textContent=name;
+                                btn.style.cssText='padding:4px 10px;font-size:11px;font-weight:700;border-radius:6px 6px 0 0;cursor:pointer;border:none;transition:all .15s;' + (name===active?'background:#fff;color:#0e7490;border:1px solid #e2e8f0;margin-bottom:-1px;':'background:#f1f5f9;color:#64748b;');
+                                btn.onclick=function(){renderSheet(wb,name);renderTabs(wb,name);};
+                                sheetTabs.appendChild(btn);
+                            });
+                        }
+                        loadXLSX(function(){
+                            fetch(url).then(function(r){return r.arrayBuffer();}).then(function(data){
+                                var wb=XLSX.read(data,{type:'array'});
+                                var first=wb.SheetNames[0];
+                                renderTabs(wb,first);
+                                renderSheet(wb,first);
+                            }).catch(function(){
+                                sheetOutput.innerHTML='<div style="padding:32px;text-align:center;color:#94a3b8;font-size:12px;">No se pudo cargar el Excel. Usa el botón Descargar.</div>';
+                            });
+                        });
+                    }
+
+                    if (fileUrl) {
+                        doRender(fileUrl);
+                    } else {
+                        sheetOutput.innerHTML='<div style="padding:32px;text-align:center;color:#94a3b8;font-size:12px;">No se encontró la URL del archivo.</div>';
+                    }
+                }
+                // -----------------------------------------------------------------
             } else {
                 v.style.display = 'none';
                 if (b) b.innerHTML = eyeOpenSvg;
@@ -1334,13 +1388,12 @@
                         if (sizeMatch) sizeInfo = sizeMatch[1].toUpperCase();
                     }
 
-                    // Extract filename from direct text nodes only (ignoring child spans)
-                    let nameText = '';
-                    link.childNodes.forEach(function(node) {
-                        if (node.nodeType === Node.TEXT_NODE) {
-                            nameText += node.textContent;
-                        }
-                    });
+                    // Extract filename properly, ignoring the size span but supporting styled spans / text nodes
+                    let linkClone = link.cloneNode(true);
+                    let innerSpans = linkClone.querySelectorAll('span');
+                    innerSpans.forEach(s => s.remove());
+                    let nameText = linkClone.textContent || '';
+
                     // Strip emojis and trim
                     nameText = nameText.replace(/[\u{1F300}-\u{1FFFF}]/gu, '')
                                        .replace(/[\u2600-\u27BF]/gu, '')
@@ -1418,9 +1471,21 @@
                 } else if (isPdfFile) {
                     viewerInner = `<iframe src="${href}#view=FitH&toolbar=1" class="w-full border-none rounded-lg bg-white shadow-inner" style="height:600px;" loading="lazy"></iframe>`;
                 } else {
-                    // Google Docs Viewer para Word, PPT, y otros (requiere URL pública)
-                    let gdocsUrl = 'https://docs.google.com/viewer?url=' + encodeURIComponent(href) + '&embedded=true';
-                    viewerInner = `<iframe src="${gdocsUrl}" class="w-full border-none rounded-lg bg-white shadow-inner" style="height:600px;" loading="lazy"></iframe>`;
+                    // Mostrar mensaje indicando que no se puede visualizar este tipo de archivo directamente
+                    viewerInner = `
+                        <div style="height:250px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px; background:#f8fafc; text-align:center; border-radius:12px; border:1px dashed #cbd5e1; margin: 10px;">
+                            <span style="font-size:36px; margin-bottom:12px;">🚫</span>
+                            <h4 style="font-size:15px; font-weight:700; color:#334155; margin:0 0 8px 0;">No se puede visualizar este documento</h4>
+                            <p style="font-size:12px; color:#64748b; margin:0 0 16px 0; max-width:320px;">
+                                Los archivos con extensión <strong>.${ext}</strong> no se pueden previsualizar directamente en el navegador.
+                            </p>
+                            <a href="${href}" download="${displayName}" style="padding:8px 16px; background:#0f172a; color:#fff; font-size:11px; font-weight:700; border-radius:8px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#1e293b';" onmouseout="this.style.backgroundColor='#0f172a';">
+                                <svg style="height:14px; width:14px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                Descargar Archivo
+                            </a>
+                        </div>`;
                 }
                 
                 let pdfWidget = `<div class="not-prose my-6 rounded-2xl border border-slate-200/80 overflow-hidden shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_-6px_rgba(0,0,0,0.1)] transition-all duration-300 bg-white group/card">
