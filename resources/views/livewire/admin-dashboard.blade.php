@@ -1336,7 +1336,7 @@
                             var ws = wb.Sheets[name];
                             var html = XLSX.utils.sheet_to_html(ws, {editable:false});
                             var cid = sheetOutput.id;
-                            sheetOutput.innerHTML = '<style>#'+cid+' table{border-collapse:collapse;width:100%;font-size:12px;font-family:monospace}#'+cid+' td,#'+cid+' th{border:1px solid #e2e8f0;padding:4px 8px;white-space:nowrap}#'+cid+' tr:nth-child(even){background:#f8fafc}#'+cid+' tr:first-child{background:#1e293b;color:#fff;font-weight:bold}</style>'+html;
+                            sheetOutput.innerHTML = '<style>#'+cid+' table{border-collapse:collapse;width:max-content;min-width:100%;font-size:12px;font-family:monospace}#'+cid+' td,#'+cid+' th{border:1px solid #e2e8f0;padding:4px 8px;white-space:nowrap}#'+cid+' tr:nth-child(even){background:#f8fafc}#'+cid+' tr:first-child{background:#1e293b;color:#fff;font-weight:bold}</style>'+html;
                         }
                         function renderTabs(wb, active) {
                             if (!sheetTabs) return;
@@ -1437,7 +1437,25 @@
                                        .replace(/[\u2600-\u27BF]/gu, '')
                                        .replace(/[\uFE00-\uFE0F]/g, '')
                                        .trim();
-                    if (nameText) displayName = nameText;
+                    if (nameText) {
+                        let isMeta = nameText.toLowerCase() === 'pdf' || 
+                                     nameText.toLowerCase() === 'xlsx' ||
+                                     nameText.toLowerCase() === 'xls' ||
+                                     nameText.toLowerCase() === 'docx' ||
+                                     nameText.toLowerCase() === 'doc' ||
+                                     nameText.toLowerCase() === 'png' ||
+                                     nameText.toLowerCase() === 'jpg' ||
+                                     nameText.toLowerCase() === 'jpeg' ||
+                                     nameText.includes('·') || 
+                                     nameText.includes('•') || 
+                                     /^\s*(?:pdf|xlsx|xls|docx|doc|png|jpg|jpeg)?\s*\(?\d+(?:\.\d+)?\s*(?:kb|mb|gb)\)?\s*$/i.test(nameText);
+                        
+                        if (!isMeta) {
+                            displayName = nameText;
+                        } else if (!displayName) {
+                            displayName = nameText;
+                        }
+                    }
                 });
                 
                 // Fallback: extract filename from the URL

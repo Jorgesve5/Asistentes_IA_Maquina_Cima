@@ -602,7 +602,7 @@
                                 var containerId = 'sheetjs-output-{{ $viewingManual->id }}';
                                 var tabsId = 'sheetjs-tabs-{{ $viewingManual->id }}';
                                 function loadSheetJS(cb) { if (window.XLSX) { cb(); return; } var s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s.onload = cb; document.head.appendChild(s); }
-                                function renderSheet(wb, sheetName) { var ws = wb.Sheets[sheetName]; var html = XLSX.utils.sheet_to_html(ws, {editable: false}); var container = document.getElementById(containerId); container.innerHTML = '<style>#' + containerId + ' table{border-collapse:collapse;width:100%;font-size:12px;font-family:monospace}#' + containerId + ' td,#' + containerId + ' th{border:1px solid #e2e8f0;padding:4px 8px;white-space:nowrap}#' + containerId + ' tr:nth-child(even){background:#f8fafc}#' + containerId + ' tr:first-child{background:#1e293b;color:white;font-weight:bold}</style>' + html; }
+                                function renderSheet(wb, sheetName) { var ws = wb.Sheets[sheetName]; var html = XLSX.utils.sheet_to_html(ws, {editable: false}); var container = document.getElementById(containerId); container.innerHTML = '<style>#' + containerId + ' table{border-collapse:collapse;width:max-content;min-width:100%;font-size:12px;font-family:monospace}#' + containerId + ' td,#' + containerId + ' th{border:1px solid #e2e8f0;padding:4px 8px;white-space:nowrap}#' + containerId + ' tr:nth-child(even){background:#f8fafc}#' + containerId + ' tr:first-child{background:#1e293b;color:white;font-weight:bold}</style>' + html; }
                                 function renderTabs(wb, activeSheet) { var tabs = document.getElementById(tabsId); tabs.innerHTML = ''; wb.SheetNames.forEach(function(name) { var btn = document.createElement('button'); btn.textContent = name; btn.className = 'px-3 py-1.5 text-xs font-bold rounded-t-lg transition-all ' + (name === activeSheet ? 'bg-white border border-b-white border-slate-200 text-cyan-700 -mb-px z-10 relative' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'); btn.onclick = function() { renderSheet(wb, name); renderTabs(wb, name); }; tabs.appendChild(btn); }); }
                                 loadSheetJS(function() { fetch(fileUrl).then(function(r) { return r.arrayBuffer(); }).then(function(data) { var wb = XLSX.read(data, {type: 'array'}); var first = wb.SheetNames[0]; renderTabs(wb, first); renderSheet(wb, first); }).catch(function(e) { document.getElementById(containerId).innerHTML = '<div class="p-8 text-center text-slate-500 text-xs">No se pudo cargar el archivo Excel.</div>'; }); });
                             })();
@@ -1291,7 +1291,7 @@
                             var ws = wb.Sheets[name];
                             var html = XLSX.utils.sheet_to_html(ws, {editable:false});
                             var cid = sheetOutput.id;
-                            sheetOutput.innerHTML = '<style>#'+cid+' table{border-collapse:collapse;width:100%;font-size:12px;font-family:monospace}#'+cid+' td,#'+cid+' th{border:1px solid #e2e8f0;padding:4px 8px;white-space:nowrap}#'+cid+' tr:nth-child(even){background:#f8fafc}#'+cid+' tr:first-child{background:#1e293b;color:#fff;font-weight:bold}</style>'+html;
+                            sheetOutput.innerHTML = '<style>#'+cid+' table{border-collapse:collapse;width:max-content;min-width:100%;font-size:12px;font-family:monospace}#'+cid+' td,#'+cid+' th{border:1px solid #e2e8f0;padding:4px 8px;white-space:nowrap}#'+cid+' tr:nth-child(even){background:#f8fafc}#'+cid+' tr:first-child{background:#1e293b;color:#fff;font-weight:bold}</style>'+html;
                         }
                         function renderTabs(wb, active) {
                             if (!sheetTabs) return;
@@ -1399,7 +1399,26 @@
                                        .replace(/[\u2600-\u27BF]/gu, '')
                                        .replace(/[\uFE00-\uFE0F]/g, '')
                                        .trim();
-                    if (nameText) displayName = nameText;
+                    
+                    if (nameText) {
+                        let isMeta = nameText.toLowerCase() === 'pdf' || 
+                                     nameText.toLowerCase() === 'xlsx' ||
+                                     nameText.toLowerCase() === 'xls' ||
+                                     nameText.toLowerCase() === 'docx' ||
+                                     nameText.toLowerCase() === 'doc' ||
+                                     nameText.toLowerCase() === 'png' ||
+                                     nameText.toLowerCase() === 'jpg' ||
+                                     nameText.toLowerCase() === 'jpeg' ||
+                                     nameText.includes('·') || 
+                                     nameText.includes('•') || 
+                                     /^\s*(?:pdf|xlsx|xls|docx|doc|png|jpg|jpeg)?\s*\(?\d+(?:\.\d+)?\s*(?:kb|mb|gb)\)?\s*$/i.test(nameText);
+                        
+                        if (!isMeta) {
+                            displayName = nameText;
+                        } else if (!displayName) {
+                            displayName = nameText;
+                        }
+                    }
                 });
                 
                 // Fallback: extract filename from URL
