@@ -567,10 +567,9 @@
                         </button>
                         @if($viewingManual->file_path)
                             <a
-                                href="{{ asset('storage/' . $viewingManual->file_path) }}"
-                                download="{{ $viewingManual->fileName }}"
+                                href="{{ route('manual.download', $viewingManual->id) }}"
                                 onclick="window.playAudio('click');"
-                                class="flex items-center gap-1.5 bg-cyan-55 bg-cyan-50 border border-cyan-100 hover:bg-cyan-100 text-cyan-700 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm"
+                                class="flex items-center gap-1.5 bg-cyan-50 border border-cyan-100 hover:bg-cyan-100 text-cyan-700 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm"
                             >
                                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -591,23 +590,96 @@
                     @if($viewingManual->file_path)
                         @if($viewingManual->file_type === 'pdf')
                             <iframe
-                                src="{{ asset('storage/' . $viewingManual->file_path) }}#toolbar=1&navpanes=0"
+                                src="{{ route('manual.view', $viewingManual->id) }}#toolbar=1&navpanes=0"
                                 class="w-full h-full border-none"
                             ></iframe>
                         @elseif($viewingManual->file_type === 'image')
                             <div class="w-full h-full p-6 flex items-center justify-center overflow-auto bg-slate-50">
                                 <img
-                                    src="{{ asset('storage/' . $viewingManual->file_path) }}"
+                                    src="{{ route('manual.view', $viewingManual->id) }}"
                                     alt="{{ $viewingManual->fileName }}"
                                     class="max-w-full max-h-full object-contain rounded-lg border border-slate-200 shadow-lg"
                                 />
                             </div>
-                        @elseif($viewingManual->file_type === 'word' || $viewingManual->file_type === 'excel')
-                            <div class="w-full h-full p-6 sm:p-8 overflow-y-auto flex flex-col bg-slate-50">
-                                <iframe
-                                    src="https://view.officeapps.live.com/op/embed.aspx?src={{ urlencode(asset('storage/' . $viewingManual->file_path)) }}"
-                                    class="w-full h-full border-none"
-                                ></iframe>
+                        @elseif($viewingManual->file_type === 'excel')
+                            {{-- SheetJS: renderiza XLS/XLSX en el navegador sin necesitar internet --}}
+                            <div class="w-full h-full flex flex-col bg-white overflow-hidden">
+                                {{-- Selector de hojas --}}
+                                <div id="sheetjs-tabs-{{ $viewingManual->id }}" class="flex gap-1 px-4 pt-3 bg-slate-50 border-b border-slate-200 overflow-x-auto flex-shrink-0"></div>
+                                {{-- Tabla Excel --}}
+                                <div class="flex-1 overflow-auto">
+                                    <div id="sheetjs-output-{{ $viewingManual->id }}" class="min-w-full"></div>
+                                </div>
+                            </div>
+                            <script>
+                            (function() {
+                                var fileUrl = '{{ route('manual.view', $viewingManual->id) }}';
+                                var containerId = 'sheetjs-output-{{ $viewingManual->id }}';
+                                var tabsId = 'sheetjs-tabs-{{ $viewingManual->id }}';
+
+                                function loadSheetJS(cb) {
+                                    if (window.XLSX) { cb(); return; }
+                                    var s = document.createElement('script');
+                                    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                                    s.onload = cb;
+                                    document.head.appendChild(s);
+                                }
+
+                                function renderSheet(wb, sheetName) {
+                                    var ws = wb.Sheets[sheetName];
+                                    var html = XLSX.utils.sheet_to_html(ws, {editable: false});
+                                    var container = document.getElementById(containerId);
+                                    container.innerHTML = '<style>#' + containerId + ' table{border-collapse:collapse;width:100%;font-size:12px;font-family:monospace}#' + containerId + ' td,#' + containerId + ' th{border:1px solid #e2e8f0;padding:4px 8px;white-space:nowrap}#' + containerId + ' tr:nth-child(even){background:#f8fafc}#' + containerId + ' tr:first-child{background:#1e293b;color:white;font-weight:bold}</style>' + html;
+                                }
+
+                                function renderTabs(wb, activeSheet) {
+                                    var tabs = document.getElementById(tabsId);
+                                    tabs.innerHTML = '';
+                                    wb.SheetNames.forEach(function(name) {
+                                        var btn = document.createElement('button');
+                                        btn.textContent = name;
+                                        btn.className = 'px-3 py-1.5 text-xs font-bold rounded-t-lg transition-all ' + (name === activeSheet ? 'bg-white border border-b-white border-slate-200 text-cyan-700 -mb-px z-10 relative' : 'bg-slate-100 text-slate-500 hover:bg-slate-200');
+                                        btn.onclick = function() { renderSheet(wb, name); renderTabs(wb, name); };
+                                        tabs.appendChild(btn);
+                                    });
+                                }
+
+                                loadSheetJS(function() {
+                                    fetch(fileUrl)
+                                        .then(function(r) { return r.arrayBuffer(); })
+                                        .then(function(data) {
+                                            var wb = XLSX.read(data, {type: 'array'});
+                                            var first = wb.SheetNames[0];
+                                            renderTabs(wb, first);
+                                            renderSheet(wb, first);
+                                        })
+                                        .catch(function(e) {
+                                            document.getElementById(containerId).innerHTML = '<div class="p-8 text-center text-slate-500 text-xs">No se pudo cargar el archivo Excel. Usa el botón Descargar.</div>';
+                                        });
+                                });
+                            })();
+                            </script>
+                        @elseif($viewingManual->file_type === 'word')
+                            {{-- Word: descarga directa ya que no se puede renderizar sin servidor --}}
+                            <div class="w-full h-full p-8 flex flex-col items-center justify-center bg-slate-50">
+                                <div class="text-center max-w-md">
+                                    <div class="h-16 w-16 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-center text-blue-500 mx-auto mb-4 shadow-sm">
+                                        <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                    </div>
+                                    <h4 class="text-sm font-black text-slate-800 uppercase tracking-wider">Documento Word</h4>
+                                    <p class="text-xs text-slate-500 mt-2 mb-6">Los archivos Word no se pueden previsualizar directamente. Descárgalo para abrirlo.</p>
+                                    <a
+                                        href="{{ route('manual.download', $viewingManual->id) }}"
+                                        class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md"
+                                    >
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                        </svg>
+                                        <span>Descargar Word</span>
+                                    </a>
+                                </div>
                             </div>
                         @else
                             <div class="w-full h-full p-8 flex flex-col items-center justify-center bg-slate-50">
@@ -620,8 +692,7 @@
                                     <h4 class="text-sm font-black text-slate-800 uppercase tracking-wider">Formato no visualizable</h4>
                                     <p class="text-xs text-slate-500 mt-2 mb-6">Este tipo de archivo no admite previsualización directa en el navegador.</p>
                                     <a
-                                        href="{{ asset('storage/' . $viewingManual->file_path) }}"
-                                        download
+                                        href="{{ route('manual.download', $viewingManual->id) }}"
                                         class="inline-flex items-center gap-1.5 bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
