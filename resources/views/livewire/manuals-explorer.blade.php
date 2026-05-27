@@ -180,7 +180,11 @@
                         <!-- Footer Actions -->
                         <div class="border-t border-slate-100 pt-3 mt-2 flex items-center justify-between text-[10px] text-slate-400">
                             <span class="font-mono">
-                                {{ number_format($manual->size / 1024, 1) }} KB
+                                @if(is_numeric($manual->size))
+                                    {{ number_format($manual->size / 1024, 1) }} KB
+                                @else
+                                    {{ $manual->size }}
+                                @endif
                             </span>
 
                             <div class="flex items-center gap-1.5">

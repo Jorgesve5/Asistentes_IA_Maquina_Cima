@@ -159,6 +159,17 @@
                     </svg>
                     <span>Preguntas Frecuentes</span>
                 </button>
+                <button
+                    type="button"
+                    wire:click="openIncidencesModal"
+                    onclick="window.playAudio('click');"
+                    class="w-full py-3 bg-amber-50 hover:bg-amber-100 text-amber-700 hover:text-amber-800 rounded-3xl border border-amber-200/80 font-black text-xs tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-2 shadow-sm"
+                >
+                    <svg class="h-4.5 w-4.5 text-amber-500 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Historial de Estados</span>
+                </button>
             </div>
         </div>
 
@@ -484,7 +495,7 @@
                                 <div class="flex-1 min-w-0">
                                     <p class="text-xs font-bold text-slate-850 text-slate-800 truncate group-hover:text-cyan-600 transition-colors uppercase">{{ $manual->fileName }}</p>
                                     <div class="flex items-center gap-2 mt-0.5">
-                                        <span class="text-[10px] text-slate-400 font-mono">{{ number_format($manual->size / 1024, 1) }} KB</span>
+                                        <span class="text-[10px] text-slate-400 font-mono">{{ is_numeric($manual->size) ? number_format($manual->size / 1024, 1) . ' KB' : $manual->size }}</span>
 
                                         @if($manual->in_chat)
                                             <span class="text-[9px] font-black text-emerald-600 uppercase tracking-widest">RAG</span>
@@ -993,6 +1004,167 @@
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    @endif
+
+    {{-- ── Historial de Incidencias/Estados Modal ── --}}
+    @if($showIncidencesModal)
+        <div
+            class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-[100]"
+            style="z-index: 9999;"
+            wire:click.self="closeIncidencesModal"
+        >
+            <div class="w-full max-w-4xl max-h-[85vh] bg-white border border-slate-200 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+                {{-- Modal Header --}}
+                <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50 flex-shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="h-10 w-10 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-center text-amber-600 shadow-sm">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-black text-slate-800 uppercase tracking-wider font-outfit">Historial del Ciclo de Vida</h3>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">{{ $machine->name }} &bull; Estados e Incidencias</p>
+                        </div>
+                    </div>
+                    <button wire:click="closeIncidencesModal" class="text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full p-1.5 transition-colors">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                {{-- Modal Body --}}
+                <div class="flex-1 overflow-y-auto p-6 bg-slate-50/50 space-y-6">
+                    
+                    {{-- Stats Summary --}}
+                    @php
+                        $totalCount = $machineIncidences->count();
+                        $averiaCount = $machineIncidences->where('type', 'warning')->count();
+                        $maintCount = $machineIncidences->where('type', 'maintenance')->count();
+                        $esperaCount = $machineIncidences->where('type', 'waiting')->count();
+                        $operCount = $machineIncidences->where('type', 'info')->count();
+                    @endphp
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 shrink-0">
+                        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm text-center">
+                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">Total Cambios</div>
+                            <div class="text-xl font-black text-slate-800">{{ $totalCount }}</div>
+                        </div>
+                        <div class="bg-white border border-emerald-100 rounded-2xl p-3.5 shadow-sm text-center">
+                            <div class="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1.5">Operativa</div>
+                            <div class="text-xl font-black text-emerald-700">{{ $operCount }}</div>
+                        </div>
+                        <div class="bg-white border border-red-100 rounded-2xl p-3.5 shadow-sm text-center">
+                            <div class="text-[10px] font-black text-red-650 uppercase tracking-widest leading-none mb-1.5">Avería</div>
+                            <div class="text-xl font-black text-red-600">{{ $averiaCount }}</div>
+                        </div>
+                        <div class="bg-white border border-orange-100 rounded-2xl p-3.5 shadow-sm text-center">
+                            <div class="text-[10px] font-black text-orange-600 uppercase tracking-widest leading-none mb-1.5">Mantenimiento</div>
+                            <div class="text-xl font-black text-orange-700">{{ $maintCount }}</div>
+                        </div>
+                        <div class="bg-white border border-amber-100 rounded-2xl p-3.5 shadow-sm text-center">
+                            <div class="text-[10px] font-black text-amber-600 uppercase tracking-widest leading-none mb-1.5">En Espera</div>
+                            <div class="text-xl font-black text-amber-700">{{ $esperaCount }}</div>
+                        </div>
+                    </div>
+
+                    {{-- Timeline Log --}}
+                    @if($machineIncidences->isEmpty())
+                        <div class="py-20 text-center bg-white border border-slate-200 rounded-3xl shadow-sm">
+                            <div class="h-16 w-16 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 mx-auto mb-4 shadow-sm">
+                                <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <h4 class="text-xs font-mono text-slate-400 uppercase tracking-widest">Sin registros históricos</h4>
+                            <p class="text-[10px] text-slate-500 mt-1 max-w-sm mx-auto">No se ha registrado ningún cambio de estado.</p>
+                        </div>
+                    @else
+                        <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+                            <div class="space-y-6">
+                                @foreach($machineIncidences as $inc)
+                                    @php
+                                        $dotColors = [
+                                            'info' => 'bg-emerald-500 ring-emerald-100',
+                                            'warning' => 'bg-red-500 ring-red-100',
+                                            'maintenance' => 'bg-orange-500 ring-orange-100',
+                                            'waiting' => 'bg-amber-500 ring-amber-100',
+                                        ];
+                                        $textColors = [
+                                            'info' => 'text-emerald-700 bg-emerald-50 border-emerald-100',
+                                            'warning' => 'text-red-700 bg-red-50 border-red-100',
+                                            'maintenance' => 'text-orange-700 bg-orange-50 border-orange-100',
+                                            'waiting' => 'text-amber-700 bg-amber-50 border-amber-100',
+                                        ];
+                                        $labels = [
+                                            'info' => 'Operativa',
+                                            'warning' => 'Avería',
+                                            'maintenance' => 'Mantenimiento',
+                                            'waiting' => 'En Espera',
+                                        ];
+                                        $type = $inc->type ?? 'info';
+                                    @endphp
+
+                                    <div class="flex gap-4 items-start relative group/modal transition-all duration-300">
+                                        <!-- Left dot column -->
+                                        <div class="flex flex-col items-center shrink-0 relative mt-1">
+                                            <!-- Dot -->
+                                            <div class="h-4 w-4 rounded-full border-2 border-white {{ $dotColors[$type] ?? $dotColors['info'] }} ring-4 shadow-[0_0_8px_rgba(0,0,0,0.05)] flex items-center justify-center z-10">
+                                                @if($type !== 'info')
+                                                    <span class="h-1.5 w-1.5 rounded-full bg-white animate-ping"></span>
+                                                @endif
+                                            </div>
+                                            <!-- Vertical Line connected to next item -->
+                                            @if(!$loop->last)
+                                                <div class="w-0.5 bg-slate-100 absolute top-4 bottom-0 -mb-6"></div>
+                                            @endif
+                                        </div>
+
+                                        <!-- Right content column -->
+                                        <div class="flex-1 min-w-0 pb-2">
+                                            <!-- Header line with Inline Delete Button -->
+                                            <div class="flex items-center justify-between gap-3 pr-2">
+                                                <div class="flex items-center gap-2.5">
+                                                    <span class="px-2.5 py-0.5 rounded-full text-[9px] font-black border uppercase tracking-wider leading-none {{ $textColors[$type] ?? $textColors['info'] }}">
+                                                        {{ $labels[$type] ?? 'Desconocido' }}
+                                                    </span>
+                                                    <span class="text-[10px] font-mono text-slate-400">
+                                                        {{ $inc->created_at ? $inc->created_at->format('d/m/Y H:i:s') : $inc->timestamp }}
+                                                    </span>
+                                                </div>
+
+                                                {{-- Always Visible Delete Button --}}
+                                                <button
+                                                    wire:click="deleteIncidence('{{ $inc->id }}')"
+                                                    onclick="return confirm('¿Seguro que deseas eliminar este registro del historial?')"
+                                                    title="Eliminar del historial"
+                                                    class="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold text-red-500 hover:bg-red-50 hover:text-red-700 border border-transparent hover:border-red-100 rounded-lg transition-all"
+                                                >
+                                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                    <span>Eliminar</span>
+                                                </button>
+                                            </div>
+
+                                            <!-- Message box -->
+                                            <div class="text-xs text-slate-700 leading-relaxed font-mono mt-2 bg-slate-50 border border-slate-100 rounded-xl p-3.5 max-w-2xl flex flex-col gap-1 shadow-sm">
+                                                 <div>La máquina marcada en <span class="font-bold uppercase text-slate-800">{{ $inc->clean_state }}</span></div>
+                                                 @if($inc->clean_description)
+                                                     <div class="text-slate-500 mt-1.5 border-t border-slate-200/60 pt-1.5">
+                                                         <span class="font-bold">Descripción:</span> {{ $inc->clean_description }}
+                                                     </div>
+                                                 @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
     @endif

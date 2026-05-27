@@ -279,7 +279,7 @@
                                                     </button>
                                                 </td>
                                                 <td class="py-2.5 text-right pr-2 text-slate-500 font-mono">
-                                                    {{ number_format($man->size / 1024, 1) }} KB
+                                                    {{ is_numeric($man->size) ? number_format($man->size / 1024, 1) . ' KB' : $man->size }}
                                                 </td>
                                                 <td class="py-2.5 text-right">
                                                     <button

@@ -203,7 +203,7 @@ class AdminDashboard extends Component
     {
         $this->validate([
             'userInput' => 'required_without:imageAttachment|nullable|string|max:1000',
-            'imageAttachment' => 'nullable|image|max:10240' // max 10MB
+            'imageAttachment' => 'nullable|image|max:102400' // max 100MB
         ]);
 
         $query = trim($this->userInput);

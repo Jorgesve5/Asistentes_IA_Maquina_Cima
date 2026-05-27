@@ -29,6 +29,7 @@ class MachineDetail extends Component
     public $showErrorsModal = false;
     public $showTrainingModal = false;
     public $showFaqModal = false;
+    public $showIncidencesModal = false;
 
     // Save conversation state
     public $showSaveModal = false;
@@ -90,7 +91,7 @@ class MachineDetail extends Component
     {
         $this->validate([
             'userInput' => 'required_without:imageAttachment|nullable|string|max:1000',
-            'imageAttachment' => 'nullable|image|max:10240' // max 10MB
+            'imageAttachment' => 'nullable|image|max:102400' // max 100MB
         ]);
 
         $query = trim($this->userInput);
@@ -543,6 +544,24 @@ class MachineDetail extends Component
         $this->showFaqModal = false;
     }
 
+    public function openIncidencesModal()
+    {
+        $this->showIncidencesModal = true;
+    }
+
+    public function closeIncidencesModal()
+    {
+        $this->showIncidencesModal = false;
+    }
+
+    public function deleteIncidence($id)
+    {
+        $alert = \App\Models\Alert::find($id);
+        if ($alert) {
+            $alert->delete();
+        }
+    }
+
     public function deleteMachineError($id)
     {
         $err = \App\Models\MachineError::find($id);
@@ -725,13 +744,30 @@ class MachineDetail extends Component
             ? \App\Models\MachineError::where('machine_id', $this->machineId)->where('is_saved', true)->latest()->get()
             : collect();
 
+        // Query recent status changes/incidences for the sidebar log (always loaded)
+        $recentIncidences = \App\Models\Alert::where('machine_id', $this->machineId)
+            ->whereIn('type', ['warning', 'maintenance', 'waiting', 'info'])
+            ->orderBy('created_at', 'desc')
+            ->take(3)
+            ->get();
+
+        // Query all status changes for the modal log (only loaded when active)
+        $machineIncidences = $this->showIncidencesModal
+            ? \App\Models\Alert::where('machine_id', $this->machineId)
+                ->whereIn('type', ['warning', 'maintenance', 'waiting', 'info'])
+                ->orderBy('created_at', 'desc')
+                ->get()
+            : collect();
+
         return view('livewire.machine-detail', [
             'machine' => $machine,
             'machineManuals' => $machineManuals,
             'categories' => $categories,
             'viewingManual' => $viewingManual,
             'supervisorMessages' => $this->supervisorMessages,
-            'machineErrors' => $machineErrors
+            'machineErrors' => $machineErrors,
+            'recentIncidences' => $recentIncidences,
+            'machineIncidences' => $machineIncidences
         ])->title("Ficha Técnica: {$machine->name}");
     }
 }

@@ -12,7 +12,7 @@ class LogAllRequests
     {
         $response = $next($request);
         
-        if ($response->status() >= 500) {
+        if ($response->getStatusCode() >= 500) {
             $content = $response->getContent();
             Log::channel('single')->error("500 ERROR CAUGHT BY MIDDLEWARE", [
                 'url' => $request->fullUrl(),
