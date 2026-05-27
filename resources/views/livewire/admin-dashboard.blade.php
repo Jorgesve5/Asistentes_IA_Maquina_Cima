@@ -216,7 +216,6 @@
                                         type="file"
                                         wire:model="uploadedFiles"
                                         multiple
-                                        accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg"
                                         class="hidden"
                                     />
                                 </label>
@@ -1176,7 +1175,6 @@
                                 type="file"
                                 x-ref="trainingFileInput"
                                 @change="handleFileUpload($event)"
-                                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.mp4,.txt"
                                 class="hidden"
                             />
 
@@ -1480,7 +1478,7 @@
                         </div>
                         <div class="px-5 py-2.5 bg-slate-50 border-t border-slate-150 flex items-center justify-between">
                             <span class="text-[10px] text-slate-400 font-mono tracking-wide">Visor PDF Interactivo</span>
-                            <a href="${href}" download class="text-[10px] text-cyan-600 hover:text-cyan-700 font-bold flex items-center gap-1 no-underline hover:underline transition-all">
+                            <a href="${href}" download="${displayName}" class="text-[10px] text-cyan-600 hover:text-cyan-700 font-bold flex items-center gap-1 no-underline hover:underline transition-all">
                                 <svg class="h-3 w-3" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                 </svg>

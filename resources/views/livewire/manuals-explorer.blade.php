@@ -191,7 +191,7 @@
                                 @if($manual->file_path)
                                     <a 
                                         href="{{ asset('storage/' . $manual->file_path) }}" 
-                                        download 
+                                        download="{{ $manual->fileName }}" 
                                         onclick="window.playAudio('click'); event.stopPropagation();" 
                                         class="h-7 w-7 flex items-center justify-center rounded-lg bg-slate-100 border border-slate-200 text-slate-500 hover:bg-slate-200 hover:text-slate-700 transition-colors"
                                         title="Descargar archivo original"
@@ -255,7 +255,7 @@
                         @if($viewingManual->file_path)
                             <a 
                                 href="{{ asset('storage/' . $viewingManual->file_path) }}" 
-                                download 
+                                download="{{ $viewingManual->fileName }}" 
                                 onclick="window.playAudio('click');" 
                                 class="flex items-center gap-1.5 bg-cyan-50 border border-cyan-100 hover:bg-cyan-100 text-cyan-700 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 shadow-sm"
                             >
@@ -328,7 +328,7 @@
                                     </p>
                                     <a 
                                         href="{{ asset('storage/' . $viewingManual->file_path) }}" 
-                                        download 
+                                        download="{{ $viewingManual->fileName }}" 
                                         class="inline-flex items-center gap-1.5 bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
