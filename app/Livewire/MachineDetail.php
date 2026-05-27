@@ -58,6 +58,12 @@ class MachineDetail extends Component
     public $incidenceReason = '';
     public $alertDismissed = false;
 
+    // Elapsed time status change modal states
+    public $showElapsedModal = false;
+    public $elapsedHours = 0;
+    public $elapsedMinutes = 0;
+    public $elapsedComments = '';
+
     public function mount($id)
     {
         $this->machineId = $id;
@@ -426,7 +432,14 @@ class MachineDetail extends Component
         $machine = Machine::find($this->machineId);
         if (!$machine) return;
 
+        // Backend guard: do not allow marking as online/operative if currently in maintenance, waiting, or warning
+        $currentStatus = trim(strtolower($machine->status));
         $newStatus = $this->incidenceStatus;
+        if ($newStatus === 'online' && ($currentStatus === 'maintenance' || $currentStatus === 'waiting' || $currentStatus === 'warning')) {
+            $this->addError('incidenceStatus', 'No puedes poner la máquina en Operativa directamente. Debes usar el botón "Tiempo Transcurrido" para restablecerla.');
+            return;
+        }
+
         $reason = trim($this->incidenceReason);
 
         $statusNames = [
@@ -480,6 +493,10 @@ class MachineDetail extends Component
         $this->incidenceReason = '';
         $this->incidenceStatus = 'warning';
         session()->flash('incidence_success', "Incidencia registrada y estado actualizado con éxito.");
+
+        if ($newStatus !== 'online') {
+            $this->dispatch('show-alert-message', message: '¡Atención! Recuerda que para activar la máquina tienes que darle a tiempo transcurrido, rellenarlo, y se activará la máquina.');
+        }
 
         // Dispatch event globally so the GlobalToast component catches it immediately
         $this->dispatch('alert-created')->to(GlobalToast::class);
@@ -552,6 +569,93 @@ class MachineDetail extends Component
     public function closeIncidencesModal()
     {
         $this->showIncidencesModal = false;
+    }
+
+    public function openElapsedModal()
+    {
+        $this->elapsedHours = 0;
+        $this->elapsedMinutes = 0;
+        $this->elapsedComments = '';
+        $this->showElapsedModal = true;
+    }
+
+    public function closeElapsedModal()
+    {
+        $this->showElapsedModal = false;
+    }
+
+    public function saveElapsedTime()
+    {
+        $machine = Machine::find($this->machineId);
+        if (!$machine) return;
+
+        $this->validate([
+            'elapsedHours' => 'required|integer|min:0',
+            'elapsedMinutes' => 'required|integer|min:0|max:59',
+            'elapsedComments' => 'nullable|string|max:1000'
+        ]);
+
+        $hours = (int)$this->elapsedHours;
+        $minutes = (int)$this->elapsedMinutes;
+
+        if ($hours === 0 && $minutes === 0) {
+            $this->addError('elapsedHours', 'Debes ingresar un tiempo transcurrido mayor a 0 minutos.');
+            return;
+        }
+
+        $duration = "";
+        if ($hours > 0) {
+            $duration .= "{$hours}h ";
+        }
+        if ($minutes > 0 || $hours === 0) {
+            $duration .= "{$minutes}m";
+        }
+        $duration = trim($duration);
+
+        $statusNames = [
+            'maintenance' => 'Mantenimiento',
+            'waiting' => 'En Espera',
+            'warning' => 'Avería',
+        ];
+        $currentStateName = $statusNames[$machine->status] ?? 'Incidencia';
+
+        // Update machine status back to online (Operativa/Disponible)
+        $machine->update([
+            'status' => 'online',
+            'subLabel' => ''
+        ]);
+
+        $commentText = trim($this->elapsedComments);
+        $alertMessage = "Finalizado {$currentStateName}. Tiempo transcurrido: {$duration}";
+        if (!empty($commentText)) {
+            $alertMessage .= ". Observaciones: {$commentText}";
+        }
+
+        // Create alert notification (Timeline)
+        \App\Models\Alert::create([
+            'id' => 'alert-' . now()->timestamp . '-' . uniqid(),
+            'machine_id' => $machine->id,
+            'machine_name' => $machine->name,
+            'message' => $alertMessage,
+            'type' => 'info', // Back to operative
+            'timestamp' => now()->format('d/m H:i'),
+            'read' => false
+        ]);
+
+        // Auto-post a message in the supervisor log
+        \App\Models\SupervisorMessage::create([
+            'id' => 'msg-' . now()->timestamp . '-' . uniqid(),
+            'machine_id' => $machine->id,
+            'machine_name' => $machine->name,
+            'text' => "🔧 [OPERARIO] Finalizó {$currentStateName}. Tiempo transcurrido: {$duration}. Observaciones: " . ($commentText ?: 'Sin observaciones.'),
+            'from' => 'operator',
+            'senderName' => 'Operario Arancalo',
+            'timestamp' => now()->format('H:i'),
+            'read' => false
+        ]);
+
+        $this->showElapsedModal = false;
+        session()->flash('incidence_success', "Tiempo registrado con éxito. Unidad restablecida a Disponible.");
     }
 
     public function deleteIncidence($id)

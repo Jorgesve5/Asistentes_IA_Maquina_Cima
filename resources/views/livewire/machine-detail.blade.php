@@ -1,4 +1,4 @@
-<div class="flex-1 flex flex-col max-w-[1400px] mx-auto w-full px-4 sm:px-6 py-6" x-data="{ init() { $nextTick(() => { if (typeof scrollToBottom === 'function') { scrollToBottom('chatbot-box'); scrollToBottom('supervisor-box'); } }) } }">
+<div class="flex-1 flex flex-col max-w-[1400px] mx-auto w-full px-4 sm:px-6 py-6" x-data="{ showAlert: false, alertMsg: '', init() { $nextTick(() => { if (typeof scrollToBottom === 'function') { scrollToBottom('chatbot-box'); scrollToBottom('supervisor-box'); } }) } }" x-on:show-alert-message.window="alertMsg = $event.detail.message || ($event.detail && $event.detail[0] && $event.detail[0].message) || ''; showAlert = true;">
     <!-- Back button -->
     <div class="mb-6 flex items-center justify-between">
         <a
@@ -75,6 +75,20 @@
                 <h1 class="text-xl font-black text-slate-900 tracking-wide uppercase leading-tight font-outfit">
                     {{ $machine->name }}
                 </h1>
+
+                @if(trim(strtolower($machine->status)) === 'maintenance' || trim(strtolower($machine->status)) === 'waiting' || trim(strtolower($machine->status)) === 'warning')
+                    <button
+                        type="button"
+                        wire:click="openElapsedModal"
+                        onclick="window.playAudio('click');"
+                        class="w-full py-3 bg-orange-50 hover:bg-orange-100 text-orange-700 hover:text-orange-850 rounded-3xl border border-orange-200 font-black text-xs tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-2 shadow-sm mt-4"
+                    >
+                        <svg class="h-4.5 w-4.5 text-orange-600 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Tiempo Transcurrido</span>
+                    </button>
+                @endif
             </div>
 
             <!-- Registrar Incidencia Card -->
@@ -87,14 +101,16 @@
                     </div>
                 @endif
 
-                <form wire:submit.prevent="registerIncidence" class="space-y-4 font-mono text-xs">
-                    <div>
+                <form wire:submit.prevent="registerIncidence" class="font-mono text-xs">
+                    <div class="mb-4">
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nuevo Estado</label>
                         <select
                             wire:model.live="incidenceStatus"
                             class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-cyan-500/50 transition-colors"
                         >
-                            <option value="online" class="bg-white text-slate-800">Operativa (Disponible)</option>
+                            @if(trim(strtolower($machine->status)) !== 'maintenance' && trim(strtolower($machine->status)) !== 'waiting' && trim(strtolower($machine->status)) !== 'warning')
+                                <option value="online" class="bg-white text-slate-800">Operativa (Disponible)</option>
+                            @endif
                             <option value="warning" class="bg-white text-slate-800">Avería</option>
                             <option value="maintenance" class="bg-white text-slate-800">Mantenimiento</option>
                             <option value="waiting" class="bg-white text-slate-800">En Espera</option>
@@ -102,7 +118,7 @@
                     </div>
 
                     @if($incidenceStatus !== 'online')
-                        <div>
+                        <div class="mb-4">
                             <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Detalles del Motivo / Avería</label>
                             <textarea
                                 wire:model="incidenceReason"
@@ -1008,6 +1024,95 @@
         </div>
     @endif
 
+    {{-- ── Tiempo Transcurrido Modal ── --}}
+    @if($showElapsedModal)
+        <div
+            class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-[100]"
+            style="z-index: 9999;"
+            wire:click.self="closeElapsedModal"
+        >
+            <div class="w-full max-w-lg bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+                {{-- Modal Header --}}
+                <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50 flex-shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="h-10 w-10 bg-orange-50 border border-orange-200 rounded-xl flex items-center justify-center text-orange-600 shadow-sm">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-black text-slate-800 uppercase tracking-wider font-outfit">Registrar Tiempo</h3>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">{{ $machine->name }}</p>
+                        </div>
+                    </div>
+                    <button wire:click="closeElapsedModal" class="text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full p-1.5 transition-colors">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                {{-- Modal Body --}}
+                <form wire:submit.prevent="saveElapsedTime" class="p-6 space-y-4 font-mono text-xs">
+                    <div>
+                        <span class="block text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-2">¿Cuánto tiempo ha estado la unidad en este estado?</span>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Horas</label>
+                                <input
+                                    type="number"
+                                    wire:model="elapsedHours"
+                                    min="0"
+                                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-orange-500/50 transition-colors"
+                                />
+                                @error('elapsedHours') <span class="text-red-500 text-[10px] mt-1">{{ $message }}</span> @enderror
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Minutos</label>
+                                <input
+                                    type="number"
+                                    wire:model="elapsedMinutes"
+                                    min="0"
+                                    max="59"
+                                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-orange-500/50 transition-colors"
+                                />
+                                @error('elapsedMinutes') <span class="text-red-500 text-[10px] mt-1">{{ $message }}</span> @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">Observaciones / Trabajos Realizados</label>
+                        <textarea
+                            wire:model="elapsedComments"
+                            rows="4"
+                            placeholder="Ej: Se realizaron ajustes en las presiones de aire y limpieza de guías..."
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-orange-500/50 transition-colors leading-relaxed"
+                        ></textarea>
+                        @error('elapsedComments') <span class="text-red-500 text-[10px] mt-1">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3 pt-2">
+                        <button
+                            type="button"
+                            wire:click="closeElapsedModal"
+                            class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            class="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-md transition-all active:scale-95"
+                        >
+                            Registrar y Activar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
     {{-- ── Historial de Incidencias/Estados Modal ── --}}
     @if($showIncidencesModal)
         <div
@@ -1151,12 +1256,19 @@
 
                                             <!-- Message box -->
                                             <div class="text-xs text-slate-700 leading-relaxed font-mono mt-2 bg-slate-50 border border-slate-100 rounded-xl p-3.5 max-w-2xl flex flex-col gap-1 shadow-sm">
-                                                 <div>La máquina marcada en <span class="font-bold uppercase text-slate-800">{{ $inc->clean_state }}</span></div>
-                                                 @if($inc->clean_description)
-                                                     <div class="text-slate-500 mt-1.5 border-t border-slate-200/60 pt-1.5">
-                                                         <span class="font-bold">Descripción:</span> {{ $inc->clean_description }}
-                                                     </div>
-                                                 @endif
+                                                <div><span class="font-bold text-slate-900">{{ $inc->machine_name ?? $machine->name }}</span> marcada en <span class="font-bold uppercase text-slate-800">{{ $inc->clean_state }}</span></div>
+                                                
+                                                @if($inc->elapsed_time)
+                                                    <div class="text-slate-600 mt-1 border-t border-slate-200/60 pt-1">
+                                                        <span class="font-bold text-slate-900">Tiempo transcurrido hasta estar operativa:</span> {{ $inc->elapsed_time }}
+                                                    </div>
+                                                @endif
+
+                                                @if($inc->clean_description)
+                                                    <div class="text-slate-500 mt-1.5 border-t border-slate-200/60 pt-1.5">
+                                                        <span class="font-bold">Descripción:</span> {{ $inc->clean_description }}
+                                                    </div>
+                                                @endif
                                             </div>
                                         </div>
                                     </div>
@@ -1436,4 +1548,31 @@
             return out;
         };
     </script>
+
+    <!-- Custom Alert Modal -->
+    <div
+        x-show="showAlert"
+        class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-[200]"
+        style="z-index: 10000; display: none;"
+        x-transition
+    >
+        <div class="w-full max-w-sm bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col p-6 text-center">
+            <div class="h-12 w-12 bg-amber-50 border border-amber-200 rounded-full flex items-center justify-center text-amber-500 mx-auto mb-4 shadow-sm">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <h3 class="text-sm font-black text-slate-800 uppercase tracking-wider font-outfit mb-2">¡Atención!</h3>
+            <p class="text-xs text-slate-600 leading-relaxed font-mono mb-6" x-text="alertMsg"></p>
+            <button
+                type="button"
+                x-on:click="showAlert = false"
+                onclick="window.playAudio('click');"
+                class="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-md transition-all active:scale-95"
+                style="background-color: rgb(249, 115, 22);"
+            >
+                Aceptar
+            </button>
+        </div>
+    </div>
 </div>

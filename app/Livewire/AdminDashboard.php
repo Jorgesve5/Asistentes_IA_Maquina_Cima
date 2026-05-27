@@ -582,17 +582,84 @@ class AdminDashboard extends Component
 
         $zip = new \ZipArchive();
         if ($zip->open($path) === true) {
-            if (($index = $zip->locateName('xl/sharedStrings.xml')) !== false) {
-                $xmlContent = $zip->getFromIndex($index);
-                $zip->close();
-                
-                $xmlContent = str_replace('</si>', "\n", $xmlContent);
-                $text = strip_tags($xmlContent);
-                return html_entity_decode(trim($text), ENT_QUOTES, 'UTF-8');
+            // 1. Read shared strings
+            $sharedStrings = [];
+            if (($stringsIndex = $zip->locateName('xl/sharedStrings.xml')) !== false) {
+                $stringsXml = $zip->getFromIndex($stringsIndex);
+                $xml = @simplexml_load_string($stringsXml);
+                if ($xml) {
+                    foreach ($xml->si as $si) {
+                        if (isset($si->t)) {
+                            $sharedStrings[] = (string)$si->t;
+                        } elseif (isset($si->r)) {
+                            $textParts = [];
+                            foreach ($si->r as $r) {
+                                if (isset($r->t)) {
+                                    $textParts[] = (string)$r->t;
+                                }
+                            }
+                            $sharedStrings[] = implode('', $textParts);
+                        } else {
+                            $sharedStrings[] = '';
+                        }
+                    }
+                }
+            }
+
+            // 2. Read sheet1.xml
+            if (($sheetIndex = $zip->locateName('xl/worksheets/sheet1.xml')) !== false) {
+                $sheetXml = $zip->getFromIndex($sheetIndex);
+                $xml = @simplexml_load_string($sheetXml);
+                if ($xml && isset($xml->sheetData)) {
+                    $rows = [];
+                    foreach ($xml->sheetData->row as $row) {
+                        $rowData = [];
+                        foreach ($row->c as $c) {
+                            $val = isset($c->v) ? (string)$c->v : '';
+                            $type = isset($c['t']) ? (string)$c['t'] : '';
+                            
+                            if ($type === 's' && $val !== '') {
+                                $idx = (int)$val;
+                                $val = isset($sharedStrings[$idx]) ? $sharedStrings[$idx] : $val;
+                            }
+                            $rowData[] = $val;
+                        }
+                        $rows[] = "| " . implode(" \t| ", $rowData) . " |";
+                    }
+                    $zip->close();
+                    return "VISTA PREVIA DE EXCEL (.XLSX):\n\n" . implode("\n", $rows);
+                }
             }
             $zip->close();
         }
-        return "No se pudo extraer texto del archivo Excel (.xlsx).";
+        return "No se pudo extraer texto estructurado del archivo Excel (.xlsx).";
+    }
+
+    private function extractTextFromXls($path)
+    {
+        $data = @file_get_contents($path);
+        if ($data === false) {
+            return "No se pudo leer el archivo Excel (.xls).";
+        }
+        
+        preg_match_all('/[\x20-\x7E\x80-\xFF]{4,}/', $data, $matches);
+        if (!empty($matches[0])) {
+            $filtered = [];
+            foreach ($matches[0] as $str) {
+                $str = trim($str);
+                if (strlen($str) > 3 && !preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $str)) {
+                    if (!in_array($str, ['Workbook', 'Worksheet', 'Root Entry', 'SummaryInformation', 'DocumentSummaryInformation', 'CompObj', 'ObjectPool'])) {
+                        if (!preg_match('/[^\x20-\x7E\s]{3,}/', $str)) {
+                            $filtered[] = htmlspecialchars($str);
+                        }
+                    }
+                }
+            }
+            if (!empty($filtered)) {
+                return "VISTA PREVIA DE EXCEL (.XLS):\n\n" . implode("\n", array_unique($filtered));
+            }
+        }
+        return "No se pudo extraer texto descriptivo legible del archivo Excel (.xls).";
     }
 
     public function updatedUploadedFiles()
@@ -641,8 +708,12 @@ class AdminDashboard extends Component
                     }
                 } elseif ($fileType === 'word' && $ext === 'docx') {
                     $text = $this->extractTextFromDocx($fullPath);
-                } elseif ($fileType === 'excel' && $ext === 'xlsx') {
-                    $text = $this->extractTextFromXlsx($fullPath);
+                } elseif ($fileType === 'excel') {
+                    if ($ext === 'xlsx') {
+                        $text = $this->extractTextFromXlsx($fullPath);
+                    } else {
+                        $text = $this->extractTextFromXls($fullPath);
+                    }
                 } else {
                     $text = "Archivo subido (" . strtoupper($ext) . "): " . $fileName;
                 }
